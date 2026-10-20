@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulateur NAT · PAN Lab Helper</title>
-<meta name="description" content="Simulateur pas-à-pas : à partir d'une IP source, d'une destination et d'un port, générez la règle NAT (source, destination, statique, U-Turn) et la règle de sécurité PAN-OS associée, avec CLI et vérifications.">
+<title>Assistant NAT · PAN-OS</title>
+<meta name="description" content="Assistant pas-à-pas : à partir d'une IP source, d'une destination et d'un port, générez la règle NAT (source, destination, statique, U-Turn) et la règle de sécurité PAN-OS associée, avec CLI et vérifications.">
 <link rel="stylesheet" href="../assets/css/style.css">
 <link rel="stylesheet" href="css/nat-sim.css">
 </head>
@@ -15,12 +15,12 @@
   <!-- ================= HERO ================= -->
   <header class="ns-hero">
     <div class="wrap">
-      <span class="kicker" data-reveal>Module 7 · Lab 7 · PAN-OS 11.0</span>
-      <h1 data-reveal data-delay="80">Simulateur <span class="grad">NAT + Sécurité</span></h1>
-      <p class="lead" data-reveal data-delay="160">Vous avez une IP, une destination et un port ? Choisissez le scénario : l'assistant génère la règle <b>NAT</b>, la règle de <b>sécurité</b> qui va avec, les commandes CLI et les tests, et anime le paquet avant et après traduction.</p>
+      <span class="kicker" data-reveal>Assistant de configuration · PAN-OS 10.x / 11.x</span>
+      <h1 data-reveal data-delay="80">Assistant <span class="grad">NAT + Sécurité</span></h1>
+      <p class="lead" data-reveal data-delay="160">IP source, destination, port : choisissez le scénario et obtenez la règle <b>NAT</b>, la règle de <b>sécurité</b> associée, le CLI prêt à coller et les commandes de vérification.</p>
       <div class="row" data-reveal data-delay="240">
         <span class="badge or">Source NAT · DIPP</span><span class="badge or">Destination NAT</span><span class="badge or">Static 1:1</span><span class="badge or">U-Turn</span>
-        <a class="btn sm ghost" href="#logique">Comprendre la logique ↓</a>
+        <a class="btn sm ghost" href="#logique">Ordre de traitement ↓</a>
       </div>
     </div>
   </header>
@@ -38,7 +38,7 @@
       <!-- ---------- ÉTAPE 1 ---------- -->
       <div class="ns-pane on" id="ns-p1" role="region" aria-label="Étape 1 : choix du scénario">
         <h2>Que voulez-vous faire&nbsp;?</h2>
-        <p class="mut" style="margin-bottom:20px">Cliquez sur un scénario. L'exemple correspondant (topologie du Lab 7) sera préchargé à l'étape suivante.</p>
+        <p class="mut" style="margin-bottom:20px">Sélectionnez un scénario. Un exemple type est prérempli à l'étape suivante : adaptez-le à votre environnement.</p>
         <div class="ns-scen" id="ns-scen"></div>
       </div>
 
@@ -50,14 +50,14 @@
             <h2 id="ns-p2-title" style="margin:4px 0 0">Paramètres</h2>
           </div>
           <span class="spacer"></span>
-          <button type="button" class="btn sm primary" id="ns-load-lab">⟲ Charger l'exemple du Lab 7</button>
-          <button type="button" class="btn sm" id="ns-load-alt" hidden>Variante : publication Internet</button>
+          <button type="button" class="btn sm primary" id="ns-load-lab">⟲ Charger un exemple</button>
+          <button type="button" class="btn sm" id="ns-load-alt" hidden>Variante : port translation</button>
         </div>
         <p class="mut small" id="ns-p2-desc" style="margin-bottom:16px"></p>
 
         <form class="ns-form" id="ns-form" novalidate autocomplete="off">
           <details class="ns-topo" id="ns-topo">
-            <summary>Topologie du pare-feu (Lab 5 : interfaces, zones, route par défaut) — sert à déduire les zones</summary>
+            <summary>Topologie du pare-feu (interfaces, zones, route par défaut) — sert à déduire les zones</summary>
             <div class="ns-topo-grid" role="group" aria-label="Interfaces du pare-feu">
               <span class="h ifc">Interface</span><span class="h">Zone</span><span class="h">IP / masque</span>
               <code class="ifc">ethernet1/1</code>
@@ -68,7 +68,7 @@
               <input type="text" id="t3-zone" aria-label="Zone de ethernet1/3"><input type="text" id="t3-ip" aria-label="IP de ethernet1/3">
             </div>
             <div class="ns-fgrid" style="margin-top:12px">
-              <div class="field"><label for="t-gw">Route par défaut 0.0.0.0/0 — next hop</label><input type="text" id="t-gw"><div class="hint">Virtual router VR-1, interface ethernet1/1</div></div>
+              <div class="field"><label for="t-gw">Route par défaut 0.0.0.0/0 — next hop</label><input type="text" id="t-gw"><div class="hint">Virtual router « default », interface ethernet1/1</div></div>
             </div>
             <div class="err" id="t-err" aria-live="polite"></div>
           </details>
@@ -77,9 +77,9 @@
             <legend>① Qui initie la connexion ? (source)</legend>
             <div class="ns-fgrid">
               <div class="field" data-for="snat dip dnat uturn"><label for="f-src">Source dans la règle (réseau CIDR, hôte ou <code>any</code>)</label><input type="text" id="f-src" placeholder="192.168.1.0/24" aria-describedby="e-f-src"><div class="err" id="e-f-src"></div></div>
-              <div class="field"><label for="f-client">IP du client de test</label><input type="text" id="f-client" placeholder="192.168.1.20" aria-describedby="e-f-client h-f-client"><div class="hint" id="h-f-client"></div><div class="err" id="e-f-client"></div></div>
+              <div class="field"><label for="f-client">IP du client de test</label><input type="text" id="f-client" placeholder="192.168.1.50" aria-describedby="e-f-client h-f-client"><div class="hint" id="h-f-client"></div><div class="err" id="e-f-client"></div></div>
               <div class="field" data-for="snat dip dnat uturn"><label for="f-srczone">Zone source <span class="ns-auto" data-auto="f-srczone">auto</span></label><select id="f-srczone"></select></div>
-              <div class="field" data-for="snat dip"><label for="f-srczone2">Zone source supplémentaire (optionnel)</label><select id="f-srczone2"></select><div class="hint">Le Lab 7 met Users_Net <b>et</b> Extranet dans la même règle.</div></div>
+              <div class="field" data-for="snat dip"><label for="f-srczone2">Zone source supplémentaire (optionnel)</label><select id="f-srczone2"></select><div class="hint">Pour couvrir plusieurs zones internes avec la même règle.</div></div>
               <div class="field" data-for="snat dip dnat uturn"><label for="f-ingress">Interface d'entrée (ingress) <span class="ns-auto" data-auto="f-ingress">auto</span></label><select id="f-ingress"></select></div>
             </div>
           </fieldset>
@@ -100,10 +100,10 @@
             <legend id="ns-leg-srv">② Le serveur publié</legend>
             <div class="ns-fgrid">
               <div class="field" data-for="static"><label for="f-client2">IP d'un client externe (test du flux entrant)</label><input type="text" id="f-client2" placeholder="198.51.100.10" aria-describedby="e-f-client2"><div class="err" id="e-f-client2"></div></div>
-              <div class="field"><label for="f-pub">IP publique / IP NAT (celle que le client vise)</label><input type="text" id="f-pub" placeholder="203.0.113.80" aria-describedby="e-f-pub"><div class="err" id="e-f-pub"></div></div>
+              <div class="field"><label for="f-pub">IP publique / IP NAT (celle que le client vise)</label><input type="text" id="f-pub" placeholder="203.0.113.20" aria-describedby="e-f-pub"><div class="err" id="e-f-pub"></div></div>
               <div class="field"><label for="f-pubzone">Zone de l'IP publique (pré-NAT) <span class="ns-auto" data-auto="f-pubzone">auto</span></label><select id="f-pubzone"></select></div>
               <div class="field"><label for="f-pubif">Interface de l'IP publique (Destination Interface) <span class="ns-auto" data-auto="f-pubif">auto</span></label><select id="f-pubif"></select></div>
-              <div class="field"><label for="f-srv">IP privée réelle du serveur</label><input type="text" id="f-srv" placeholder="192.168.50.80" aria-describedby="e-f-srv"><div class="err" id="e-f-srv"></div></div>
+              <div class="field"><label for="f-srv">IP privée réelle du serveur</label><input type="text" id="f-srv" placeholder="172.16.1.10" aria-describedby="e-f-srv"><div class="err" id="e-f-srv"></div></div>
               <div class="field"><label for="f-srvzone">Zone du serveur (post-NAT) <span class="ns-auto" data-auto="f-srvzone">auto</span></label><select id="f-srvzone"></select></div>
               <div class="field" data-for="uturn"><label class="ns-chk" for="f-uturnsnat"><input type="checkbox" id="f-uturnsnat" checked> Ajouter aussi une <b>source NAT</b> (DIPP sur l'interface côté serveur)</label><div class="hint">Indispensable si le serveur est dans la même zone/sous-réseau que le client ; garantit sinon un retour symétrique.</div></div>
               <div class="field" data-for="static"><label class="ns-chk" for="f-bidir"><input type="checkbox" id="f-bidir" checked> <span><b>Bi-directional</b> : crée aussi la traduction inverse (entrant)</span></label></div>
@@ -122,8 +122,8 @@
               <div class="field"><label for="f-natname">Nom de la règle NAT</label><input type="text" id="f-natname" aria-describedby="e-f-natname"><div class="err" id="e-f-natname"></div></div>
               <div class="field"><label for="f-secname">Nom de la règle de sécurité</label><input type="text" id="f-secname" aria-describedby="e-f-secname"><div class="err" id="e-f-secname"></div></div>
               <div class="field" data-for="static"><label for="f-secname2">Nom de la 2ᵉ règle de sécurité (entrant)</label><input type="text" id="f-secname2" aria-describedby="e-f-secname2"><div class="err" id="e-f-secname2"></div></div>
-              <div class="field"><label class="ns-chk" for="f-useobj"><input type="checkbox" id="f-useobj"> Utiliser des objets <b>Address</b> (sinon IP littérales, comme dans le lab)</label></div>
-              <div class="field"><label for="f-objpfx">Préfixe des objets</label><input type="text" id="f-objpfx" placeholder="WebSrv" aria-describedby="e-f-objpfx"><div class="err" id="e-f-objpfx"></div></div>
+              <div class="field"><label class="ns-chk" for="f-useobj"><input type="checkbox" id="f-useobj"> Utiliser des objets <b>Address</b> (sinon IP littérales)</label></div>
+              <div class="field"><label for="f-objpfx">Préfixe des objets</label><input type="text" id="f-objpfx" placeholder="Web" aria-describedby="e-f-objpfx"><div class="err" id="e-f-objpfx"></div></div>
             </div>
           </fieldset>
 
@@ -155,18 +155,15 @@
     </div>
   </section>
 
-  <!-- ================= LOGIQUE ================= -->
-  <section id="logique" aria-labelledby="ns-logic-title">
+  <!-- ================= ORDRE DE TRAITEMENT (rappel) ================= -->
+  <section id="logique" aria-labelledby="ns-logic-title" style="padding-top:24px">
     <div class="wrap">
-      <span class="kicker" data-reveal>Flow logic · slides M06/M07</span>
-      <h2 id="ns-logic-title" data-reveal>Comprendre la <span class="grad">logique de traitement</span></h2>
-      <p class="lead" data-reveal>Pourquoi la règle de sécurité utilise les IP d'origine mais la zone finale ? Parce que la NAT est <b>évaluée</b> tôt (pour connaître la zone de destination) mais <b>appliquée</b> seulement à la sortie.</p>
-      <div class="ns-tl" id="ns-tl" role="tablist" aria-label="Étapes du traitement d'un paquet" data-reveal></div>
-      <div class="card ns-tldet" id="ns-tldet" role="tabpanel" aria-live="polite"></div>
-      <div class="row" style="margin-top:14px">
-        <button type="button" class="btn sm" id="ns-tl-play">▶ Lecture automatique</button>
-        <span class="mut small">Source : « Flow Logic of the Next-Generation Firewall » (EDU-210 M06 slide 4 / M07 slide 23) — <i>*Policy check relies on pre-NAT IP addresses</i>.</span>
-      </div>
+      <details class="ns-topo ns-logic" id="ns-logic">
+        <summary><span id="ns-logic-title">Ordre de traitement PAN-OS (rappel)</span> — NAT évaluée tôt, appliquée à l'egress</summary>
+        <div class="ns-tl" id="ns-tl" role="tablist" aria-label="Étapes du traitement d'un paquet"></div>
+        <div class="card ns-tldet" id="ns-tldet" role="tabpanel" aria-live="polite"></div>
+        <div class="row" style="margin-top:14px"><button type="button" class="btn sm" id="ns-tl-play">▶ Lecture automatique</button></div>
+      </details>
     </div>
   </section>
 </main>

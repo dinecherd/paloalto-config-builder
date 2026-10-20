@@ -148,3 +148,6 @@ details.ns-topo summary{cursor:pointer;font-weight:700;color:var(--tx2)}
   .ns-gold::after,.ns-ico .mv{animation:none}
 }
 .ns-card .badge{align-self:flex-start}
+.ns-logic summary{font-size:16px}
+.ns-logic[open] summary{margin-bottom:6px}
+.ns-logic .ns-tldet{min-height:0;margin-top:18px}

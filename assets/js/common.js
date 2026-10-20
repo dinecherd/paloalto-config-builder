@@ -1,4 +1,4 @@
-/* PAN Lab Helper — JS commun (aucune dépendance, compatible file://)
+/* PAN Config Builder — JS commun (aucune dépendance, compatible file://)
    Usage dans chaque page :
      <body data-root="../" data-page="nat-sim">   (data-root = "" pour index.html)
      <div id="site-nav"></div> ... <div id="site-foot"></div>
@@ -10,11 +10,9 @@
 
   const LINKS = [
     { id: "home", href: "index.html", label: "Accueil" },
-    { id: "guide-sec", href: "pages/guide-securite.html", label: "Guide Sécurité" },
-    { id: "guide-nat", href: "pages/guide-nat.html", label: "Guide NAT" },
-    { id: "sec-sim", href: "pages/simulateur-securite.html", label: "Simulateur Règle" },
-    { id: "nat-sim", href: "pages/simulateur-nat.html", label: "Simulateur NAT" },
-    { id: "quiz", href: "pages/quiz.html", label: "Quiz" },
+    { id: "cfg", href: "pages/configurateur.html", label: "Configurateur" },
+    { id: "nat-sim", href: "pages/simulateur-nat.html", label: "Assistant NAT" },
+    { id: "sec-sim", href: "pages/simulateur-securite.html", label: "Assistant Règle" },
   ];
 
   /* ---------- nav + footer ---------- */
@@ -24,7 +22,7 @@
     <nav class="nav" id="nav"><div class="wrap">
       <a class="brand" href="${root}index.html" aria-label="Accueil">
         <span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span>
-        <span>PAN Lab Helper<small>EDU-210 · PAN-OS 11.0</small></span>
+        <span>PAN Config Builder<small>Palo Alto · PAN-OS 11.0</small></span>
       </a>
       <button class="nav-burger" aria-label="Menu" aria-expanded="false">☰</button>
       <ul class="nav-links">
@@ -39,8 +37,8 @@
   if (foot) {
     foot.outerHTML = `
     <footer class="foot"><div class="wrap">
-      <div><b style="color:var(--tx2)">PAN Lab Helper</b> — outil pédagogique non officiel basé sur le cursus EDU-210 (PAN-OS 11.0).<br>
-      Palo Alto Networks, PAN-OS et EDU-210 sont des marques de leurs propriétaires respectifs. Vérifiez toujours avec la documentation officielle.</div>
+      <div><b style="color:var(--tx2)">PAN Config Builder</b> — outil d'aide à la configuration, non officiel (PAN-OS 11.0).<br>
+      Palo Alto Networks et PAN-OS sont des marques de leurs propriétaires respectifs. Relisez toujours la configuration générée avant de l'appliquer en production.</div>
       <div>Conçu par <b style="color:var(--or2)">Dinèche RADJOU</b></div>
     </div></footer>`;
   }

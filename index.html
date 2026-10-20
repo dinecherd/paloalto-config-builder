@@ -3,54 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PAN Lab Helper · EDU-210</title>
-<meta name="description" content="Outil d'aide interactif EDU-210 (PAN-OS 11.0) : simulateurs de règles de sécurité et de NAT, guides pas-à-pas et quiz.">
+<title>PAN Config Builder</title>
+<meta name="description" content="Configurateur PAN-OS 11.0 : renseigne tes informations, obtiens le pas-à-pas WebUI avec validation ou la CLI prête à coller.">
 <link rel="stylesheet" href="assets/css/style.css">
 <style>
-  .hero{padding:90px 0 60px;position:relative}
+  .hero{padding:80px 0 50px}
   .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
   .hero h1{margin:14px 0 18px}
-  .hero .cta{margin-top:30px}
-  .hero-stats{display:flex;gap:28px;margin-top:38px;flex-wrap:wrap}
-  .hero-stats b{display:block;font-size:30px;font-weight:900;letter-spacing:-.03em}
-  .hero-stats span{color:var(--mut);font-size:13px}
-  .typed{color:#fff;border-right:3px solid var(--or2);padding-right:4px;animation:caret 1s steps(1) infinite}
-  @keyframes caret{50%{border-color:transparent}}
-  /* schéma hero */
   .topo{width:100%;height:auto;filter:drop-shadow(0 30px 60px rgba(0,0,0,.5))}
   .topo .node rect{fill:#0B1224;stroke:var(--line2)}
   .topo text{font:600 12px var(--font);fill:#CBD5E1}
   .topo .lbl{font:800 10px var(--font);letter-spacing:.12em;fill:#06101f}
-  .topo .fw-core{animation:pulse-or 2.4s infinite;transform-box:fill-box;transform-origin:center}
+  .topo .fw-core{animation:pulse-or 2.4s infinite}
   .topo .pkt{filter:drop-shadow(0 0 6px var(--or2))}
   .hdr-card{font:600 11px var(--mono)}
-  /* menu */
-  .tool .ico{font-size:26px}
-  .tool .meta{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-  .tool .go{position:absolute;right:22px;top:24px;font-size:22px;color:var(--mut2);transition:.3s var(--ease)}
-  .tool:hover .go{color:var(--or2);transform:translateX(4px)}
-  /* comment ça marche */
-  .how{counter-reset:h}
-  .how .card{padding-top:58px}
-  .how .card::before{counter-increment:h;content:"0" counter(h);position:absolute;top:18px;left:24px;font:900 28px var(--font);color:transparent;-webkit-text-stroke:1px var(--or2)}
-  /* roadmap modules */
-  .mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-  .mod{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:14px;background:var(--panel);border:1px solid var(--line);transition:.3s var(--ease)}
-  .mod b{font:900 13px var(--mono);color:var(--mut);min-width:34px}
-  .mod span{font-size:14px;font-weight:600;color:var(--tx2)}
-  .mod.live{border-color:rgba(250,88,45,.55);background:rgba(250,88,45,.08)}
-  .mod.live b{color:var(--or2)}
-  .mod.live:hover{transform:translateY(-3px);box-shadow:0 14px 40px -18px var(--or-glow)}
-  .mod .badge{margin-left:auto;font-size:10px;padding:2px 7px}
-  /* règle d'or */
-  .gold{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center}
-  .gold .card{text-align:center}
-  .gold .eq{font:900 40px var(--font);color:var(--or2)}
-  .marquee{overflow:hidden;border-block:1px solid var(--line);padding:14px 0;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
-  .marquee div{display:flex;gap:40px;width:max-content;animation:mq 40s linear infinite;color:var(--mut);font:700 14px var(--mono)}
-  .marquee i{font-style:normal;color:var(--or2)}
-  @keyframes mq{to{transform:translateX(-50%)}}
-  @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero{padding-top:50px}.gold{grid-template-columns:1fr}.gold .eq{transform:rotate(90deg);justify-self:center}}
+  .hsearch{position:relative;margin-top:28px;max-width:560px}
+  .hsearch input{padding:16px 18px 16px 50px;font-size:17px;border-radius:16px;background:rgba(0,0,0,.45);border:1px solid rgba(250,88,45,.45);box-shadow:0 20px 50px -25px var(--or-glow)}
+  .hsearch::before{content:"🔎";position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:18px}
+  .hsug{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#0B1224;border:1px solid var(--line2);border-radius:14px;overflow:hidden;z-index:20;box-shadow:var(--sh);display:none}
+  .hsug.show{display:block}
+  .hsug a{display:flex;gap:10px;align-items:center;padding:10px 14px;color:var(--tx);font-size:14px}
+  .hsug a:hover,.hsug a.sel{background:rgba(250,88,45,.14);text-decoration:none}
+  .hsug small{margin-left:auto;color:var(--mut2);font-weight:700}
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px;max-width:560px}
+  .modes div{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);font-size:14px;color:var(--mut)}
+  .modes b{display:block;color:#fff;font-size:15px;margin-bottom:2px}
+  .dash-t{display:flex;align-items:baseline;gap:10px;margin:34px 0 12px}
+  .dash-t b{font:900 13px var(--mono);color:var(--or2)}
+  .dash-t span{font-weight:750;color:var(--tx2)}
+  .mcard{padding:18px 18px 16px}.mcard .ico{width:42px;height:42px;font-size:20px;margin-bottom:10px}
+  .mcard h3{font-size:16px}.mcard p{font-size:13px}
+  .feat{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+  @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero{padding-top:44px}.modes{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-root="" data-page="home">
@@ -59,23 +43,20 @@
 <header class="hero">
   <div class="wrap">
     <div>
-      <span class="kicker fade-up">Formation EDU-210 · PAN-OS 11.0</span>
-      <h1 class="fade-up" style="animation-delay:80ms">Configure ton firewall<br><span class="grad">comme en production.</span></h1>
-      <p class="lead fade-up" style="animation-delay:160ms">Tu as une IP source, une destination, un port&nbsp;? Le simulateur te génère la <b style="color:#fff">règle NAT</b>, la <b style="color:#fff">règle de sécurité</b> associée, les écrans WebUI à remplir et les commandes CLI — en t'expliquant le <span class="typed" id="typed">pourquoi</span></p>
-      <div class="row cta fade-up" style="animation-delay:240ms">
-        <a class="btn primary" href="pages/simulateur-nat.html">⚡ Lancer le simulateur NAT</a>
-        <a class="btn" href="pages/simulateur-securite.html">🛡️ Créer une règle de sécurité</a>
+      <span class="kicker fade-up">Configurateur PAN-OS 11.0</span>
+      <h1 class="fade-up" style="animation-delay:80ms">Tes infos en entrée.<br><span class="grad">Ta config en sortie.</span></h1>
+      <p class="lead fade-up" style="animation-delay:160ms">Hostname, interfaces, zones, règles de sécurité, NAT, profils, User-ID, décryptage, VPN… Renseigne tes valeurs, l'outil les valide et te donne la configuration prête à appliquer.</p>
+      <div class="hsearch fade-up" style="animation-delay:240ms">
+        <input type="text" id="hs" placeholder="Que veux-tu configurer ? (ex. NAT, hostname, VPN, interface)" aria-label="Rechercher un module" autocomplete="off">
+        <div class="hsug" id="hsug" role="listbox"></div>
       </div>
-      <div class="hero-stats fade-up" style="animation-delay:320ms">
-        <div><b class="grad" data-count="2">0</b><span>simulateurs interactifs</span></div>
-        <div><b class="grad" data-count="2">0</b><span>guides pas-à-pas</span></div>
-        <div><b class="grad" data-count="14">0</b><span>modules EDU-210</span></div>
+      <div class="modes fade-up" style="animation-delay:320ms">
+        <div><b>🖱️ Mode GUI</b>Les écrans WebUI étape par étape, chemins de menu, onglets et valeurs. Tu coches chaque étape faite.</div>
+        <div><b>⌨️ Mode CLI</b>Les commandes <code>set</code> prêtes à coller en SSH, avec commit et commandes de vérification.</div>
       </div>
     </div>
-
-    <!-- topologie animée : un paquet traverse le firewall et se fait traduire -->
     <div class="fade-up" style="animation-delay:200ms">
-      <svg class="topo float" viewBox="0 0 520 400" role="img" aria-label="Schéma animé : un paquet passe de la zone Users_Net à la zone Internet à travers le pare-feu, son adresse source est traduite">
+<svg class="topo float" viewBox="0 0 520 400" role="img" aria-label="Schéma animé : un paquet passe de la zone Trust à la zone Untrust à travers le pare-feu, son adresse source est traduite">
         <defs>
           <linearGradient id="gOr" x1="0" x2="1"><stop offset="0" stop-color="#FA582D"/><stop offset="1" stop-color="#FF8A3D"/></linearGradient>
           <filter id="glow"><feGaussianBlur stdDeviation="8"/></filter>
@@ -83,15 +64,15 @@
         <!-- zones -->
         <rect x="10" y="40" width="150" height="320" rx="18" fill="rgba(34,197,94,.06)" stroke="rgba(34,197,94,.5)" stroke-dasharray="5 6"/>
         <rect x="360" y="40" width="150" height="320" rx="18" fill="rgba(239,68,68,.06)" stroke="rgba(239,68,68,.5)" stroke-dasharray="5 6"/>
-        <rect x="40" y="26" width="80" height="22" rx="6" fill="#22C55E"/><text class="lbl" x="80" y="41" text-anchor="middle">USERS_NET</text>
-        <rect x="395" y="26" width="80" height="22" rx="6" fill="#EF4444"/><text class="lbl" x="435" y="41" text-anchor="middle">INTERNET</text>
+        <rect x="40" y="26" width="80" height="22" rx="6" fill="#22C55E"/><text class="lbl" x="80" y="41" text-anchor="middle">TRUST</text>
+        <rect x="395" y="26" width="80" height="22" rx="6" fill="#EF4444"/><text class="lbl" x="435" y="41" text-anchor="middle">UNTRUST</text>
         <!-- liens -->
         <path id="path1" d="M110 200 H250 H410" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
         <path d="M110 200 H410" fill="none" stroke="url(#gOr)" stroke-width="2" class="flow-line" opacity=".7"/>
         <!-- client -->
         <g class="node"><rect x="45" y="165" width="70" height="70" rx="14"/>
           <path d="M63 185h34v22H63z M72 213h16" stroke="#38BDF8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <text x="80" y="258" text-anchor="middle">Client</text><text x="80" y="274" text-anchor="middle" style="fill:#64748B;font-size:10px">192.168.1.20</text></g>
+          <text x="80" y="258" text-anchor="middle">Client</text><text x="80" y="274" text-anchor="middle" style="fill:#64748B;font-size:10px">192.168.1.50</text></g>
         <!-- internet -->
         <g class="node"><rect x="400" y="165" width="70" height="70" rx="14"/>
           <circle cx="435" cy="200" r="17" stroke="#F87171" stroke-width="2.5" fill="none"/><path d="M418 200h34 M435 183c-8 10-8 24 0 34 M435 183c8 10 8 24 0 34" stroke="#F87171" stroke-width="2" fill="none"/>
@@ -108,143 +89,76 @@
         <g class="hdr-card">
           <rect x="18" y="300" width="220" height="50" rx="10" fill="#050913" stroke="rgba(56,189,248,.45)"/>
           <text x="30" y="320" style="fill:#38BDF8">AVANT NAT (pré-NAT)</text>
-          <text x="30" y="338" style="fill:#E2E8F0">src 192.168.1.20 → dst 8.8.8.8</text>
+          <text x="30" y="338" style="fill:#E2E8F0">src 192.168.1.50 → dst 8.8.8.8</text>
           <rect x="282" y="300" width="220" height="50" rx="10" fill="#050913" stroke="rgba(250,88,45,.6)"/>
           <text x="294" y="320" style="fill:#FF8A3D">APRÈS NAT (DIPP)</text>
-          <text x="294" y="338" style="fill:#E2E8F0">src 203.0.113.20 → dst 8.8.8.8</text>
+          <text x="294" y="338" style="fill:#E2E8F0">src 203.0.113.10 → dst 8.8.8.8</text>
         </g>
         <path d="M238 325 h44" stroke="#FF8A3D" stroke-width="2" marker-end="url(#a)"/>
         <defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10z" fill="#FF8A3D"/></marker></defs>
         <text x="260" y="118" text-anchor="middle" style="fill:#94A3B8;font-size:11px">ethernet1/2 ◂ ▸ ethernet1/1</text>
-      </svg>
-    </div>
+      </svg>    </div>
   </div>
 </header>
 
-<div class="marquee" aria-hidden="true"><div>
-  <span><i>set</i> rulebase nat rules Inside_Nets_to_Internet from Users_Net to Internet source-translation dynamic-ip-and-port</span>
-  <span><i>test</i> security-policy-match from Users_Net to Internet application web-browsing</span>
-  <span><i>show</i> session all filter nat source</span>
-  <span><i>set</i> rulebase security rules Users_to_Internet service application-default action allow</span>
-  <span><i>commit</i></span>
-  <span><i>set</i> rulebase nat rules Inside_Nets_to_Internet from Users_Net to Internet source-translation dynamic-ip-and-port</span>
-  <span><i>test</i> security-policy-match from Users_Net to Internet application web-browsing</span>
-  <span><i>show</i> session all filter nat source</span>
-  <span><i>set</i> rulebase security rules Users_to_Internet service application-default action allow</span>
-  <span><i>commit</i></span>
-</div></div>
-
-<!-- OUTILS -->
-<section id="outils">
+<section style="padding-top:20px">
   <div class="wrap">
-    <span class="kicker" data-reveal>Le menu</span>
-    <h2 data-reveal>Choisis ton outil</h2>
-    <p class="lead" data-reveal>Des simulateurs qui reproduisent la WebUI PAN-OS, et des guides basés sur les labs EDU-210.</p>
-    <div class="grid g2" style="margin-top:34px">
-      <a class="card hover tool" href="pages/simulateur-nat.html" data-reveal>
-        <span class="go">→</span><div class="ico">🔀</div>
-        <h3>Simulateur NAT</h3>
-        <p class="mut">IP source, destination, port → règle Source NAT / Destination NAT / U-turn + règle de sécurité associée, flux animé et CLI.</p>
-        <div class="meta"><span class="badge or">M07</span><span class="badge">SNAT · DNAT · U-turn</span><span class="badge ok">Interactif</span></div>
-      </a>
-      <a class="card hover tool" href="pages/simulateur-securite.html" data-reveal data-delay="80">
-        <span class="go">→</span><div class="ico">🛡️</div>
-        <h3>Simulateur de règle de sécurité</h3>
-        <p class="mut">Construis ta règle onglet par onglet, obtiens un score bonnes pratiques, teste un flux dans la rulebase (first match).</p>
-        <div class="meta"><span class="badge or">M06</span><span class="badge">App-ID · Profils · Logs</span><span class="badge ok">Interactif</span></div>
-      </a>
-      <a class="card hover tool" href="pages/guide-securite.html" data-reveal data-delay="120">
-        <span class="go">→</span><div class="ico">📘</div>
-        <h3>Guide : créer une règle de sécurité</h3>
-        <p class="mut">Le tuto pas-à-pas du Lab 6 : objets, onglets, commit, vérification et dépannage — avec les à-faire / à-ne-pas-faire.</p>
-        <div class="meta"><span class="badge or">M06 · Lab 6</span><span class="badge">Tutoriel</span></div>
-      </a>
-      <a class="card hover tool" href="pages/guide-nat.html" data-reveal data-delay="160">
-        <span class="go">→</span><div class="ico">📗</div>
-        <h3>Guide : créer une règle D-NAT / S-NAT</h3>
-        <p class="mut">Publier un serveur DMZ, sortir sur Internet en DIPP, et la règle d'or IP pré-NAT / zone post-NAT expliquée en animation.</p>
-        <div class="meta"><span class="badge or">M07 · Lab 7</span><span class="badge">Tutoriel</span></div>
-      </a>
-      <a class="card hover tool" href="pages/quiz.html" data-reveal data-delay="200" style="grid-column:1/-1">
-        <span class="go">→</span><div class="ico">🎯</div>
-        <h3>Quiz EDU-210</h3>
-        <p class="mut">Entraîne-toi sur l'ensemble des modules (mode examen chronométré inclus) avant le PCNSA.</p>
-        <div class="meta"><span class="badge or">M01 → M14</span><span class="badge">PCNSA</span></div>
-      </a>
+    <span class="kicker" data-reveal>Tous les modules</span>
+    <h2 data-reveal>Choisis ce que tu configures</h2>
+    <div class="feat" data-reveal>
+      <a class="btn primary sm" href="pages/simulateur-nat.html">🔀 Assistant NAT animé</a>
+      <a class="btn sm" href="pages/simulateur-securite.html">🛡️ Assistant règle de sécurité + test de flux</a>
+      <a class="btn sm ghost" href="pages/configurateur.html">Ouvrir le configurateur →</a>
     </div>
-  </div>
-</section>
-
-<!-- RÈGLE D'OR -->
-<section>
-  <div class="wrap">
-    <span class="kicker" data-reveal>À retenir avant tout</span>
-    <h2 data-reveal>La règle d'or du NAT sur PAN-OS</h2>
-    <p class="lead" data-reveal>Quand une règle NAT s'applique, la règle de sécurité correspondante s'écrit avec&nbsp;:</p>
-    <div class="gold" style="margin-top:30px">
-      <div class="card" data-reveal="left"><div class="ico" style="margin-inline:auto">🌐</div><h3>Adresses IP pré-NAT</h3><p class="mut">Les IP <b>originales</b> du paquet, telles qu'il arrive sur le pare-feu (ex. l'IP publique du serveur publié).</p></div>
-      <div class="eq" data-reveal="zoom">+</div>
-      <div class="card" data-reveal="right"><div class="ico" style="margin-inline:auto">🧭</div><h3>Zone post-NAT</h3><p class="mut">La zone de destination <b>finale</b>, celle où se trouve l'IP traduite (ex. la zone Extranet du serveur web).</p></div>
-    </div>
-    <div class="callout or" data-reveal style="margin-top:24px"><b>Pourquoi&nbsp;?</b>La politique NAT est évaluée sur le paquet original pour déterminer la traduction, mais la traduction n'est appliquée qu'à la sortie. La politique de sécurité voit donc les IP d'origine et la zone de sortie calculée après la recherche de route sur l'adresse traduite. <a href="pages/guide-nat.html">Voir l'animation complète →</a></div>
-  </div>
-</section>
-
-<!-- COMMENT ÇA MARCHE -->
-<section>
-  <div class="wrap">
-    <span class="kicker" data-reveal>Mode d'emploi</span>
-    <h2 data-reveal>Trois étapes, zéro prise de tête</h2>
-    <div class="grid g3 how" style="margin-top:30px">
-      <div class="card" data-reveal><h3>Renseigne ton flux</h3><p class="mut">IP source, IP destination, port, zones et interfaces. Ou charge directement l'exemple du lab en un clic.</p></div>
-      <div class="card" data-reveal data-delay="100"><h3>Suis les écrans</h3><p class="mut">Le simulateur remplit les onglets de la WebUI (Policies › NAT, Policies › Security) exactement comme tu devras le faire.</p></div>
-      <div class="card" data-reveal data-delay="200"><h3>Copie, commit, vérifie</h3><p class="mut">Récupère les commandes CLI, commit, puis valide avec <code>test security-policy-match</code> et les logs Traffic.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ROADMAP -->
-<section>
-  <div class="wrap">
-    <span class="kicker" data-reveal>Programme</span>
-    <h2 data-reveal>Les modules EDU-210</h2>
-    <p class="lead" data-reveal>Le site couvre pour l'instant le cœur réseau/politiques. Les autres modules arrivent.</p>
-    <div class="mods" style="margin-top:28px" id="mods"></div>
+    <div id="dash"></div>
   </div>
 </section>
 
 <div id="site-foot"></div>
 <script src="assets/js/common.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/modules/std.js"></script>
+<script src="assets/js/modules/m02-m04.js"></script>
+<script src="assets/js/modules/m05.js"></script>
+<script src="assets/js/modules/m06-m07.js"></script>
+<script src="assets/js/modules/m08-m10.js"></script>
+<script src="assets/js/modules/m11-m14.js"></script>
+<script src="assets/js/modules/sup.js"></script>
 <script>
-  // roadmap des modules
-  const MODS = [
-    ["M01","Plateforme & architecture"],["M02","Paramètres initiaux"],["M03","Gestion des configurations"],
-    ["M04","Comptes administrateurs"],["M05","Zones de sécurité","pages/guide-securite.html"],["M06","Security Policies","pages/simulateur-securite.html"],
-    ["M07","NAT Policies","pages/simulateur-nat.html"],["M08","App-ID"],["M09","Security Profiles"],["M10","URL Filtering"],
-    ["M11","WildFire"],["M12","User-ID"],["M13","Décryptage"],["M14","Logs & rapports"]];
-  document.getElementById("mods").innerHTML = MODS.map(([n, t, h], i) => h
-    ? `<a class="mod live" href="${h}" data-reveal data-delay="${i * 40}"><b>${n}</b><span>${t}</span><span class="badge ok">Dispo</span></a>`
-    : `<div class="mod" data-reveal data-delay="${i * 40}"><b>${n}</b><span>${t}</span><span class="badge">Bientôt</span></div>`).join("");
+  const C = PAN.cfg, mods = C.list, link = d => "pages/configurateur.html#" + d.id;
+  // grille de tous les modules, groupés par catégorie
+  const groups = {};
+  mods.forEach(d => (groups[d.module] = groups[d.module] || []).push(d));
+  document.getElementById("dash").innerHTML = Object.keys(groups).sort(C.modSort).map(m => `
+    <div class="dash-t" data-reveal><span>${PAN.esc(C.MODNAMES[m] || m)}</span></div>
+    <div class="grid g4">${groups[m].map((d, i) => `
+      <a class="card hover mcard" href="${link(d)}" data-reveal data-delay="${i * 50}">
+        <div class="ico">${d.icon || "⚙️"}</div><h3>${PAN.esc(d.title)}</h3><p class="mut">${PAN.esc(d.desc || "")}</p></a>`).join("")}</div>`).join("");
   PAN.reveal();
 
-  // compteurs animés
-  const ioC = new IntersectionObserver(es => es.forEach(e => {
-    if (!e.isIntersecting) return; ioC.unobserve(e.target);
-    const to = +e.target.dataset.count, t0 = performance.now();
-    const step = t => { const k = Math.min(1, (t - t0) / 1200); e.target.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
-    requestAnimationFrame(step);
-  }));
-  document.querySelectorAll("[data-count]").forEach(el => ioC.observe(el));
-
-  // machine à écrire
-  const words = ["pourquoi.", "règle d'or.", "bon ordre.", "piège à éviter."];
-  const el = document.getElementById("typed"); let wi = 0, ci = 0, del = false;
-  (function tick() {
-    const w = words[wi]; el.textContent = w.slice(0, ci);
-    if (!del && ci === w.length) { del = true; return setTimeout(tick, 1600); }
-    if (del && ci === 0) { del = false; wi = (wi + 1) % words.length; }
-    ci += del ? -1 : 1; setTimeout(tick, del ? 40 : 75);
-  })();
+  // recherche avec suggestions (clavier ↑ ↓ Entrée)
+  const hs = document.getElementById("hs"), sug = document.getElementById("hsug");
+  let sel = 0, hits = [];
+  const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  function render() {
+    const f = norm(hs.value.trim());
+    hits = f ? mods.filter(d => norm(d.title + " " + d.module + " " + (d.desc || "") + " " + (d.tags || "")).includes(f)).slice(0, 8) : [];
+    sel = 0;
+    sug.innerHTML = hits.map((d, i) => `<a href="${link(d)}" class="${i ? "" : "sel"}" role="option">${d.icon || "⚙️"} ${PAN.esc(d.title)}<small>${d.module}</small></a>`).join("")
+      || (f ? `<a href="pages/configurateur.html">Aucun résultat — voir tous les modules</a>` : "");
+    sug.classList.toggle("show", !!f);
+  }
+  hs.addEventListener("input", render);
+  hs.addEventListener("keydown", e => {
+    const items = sug.querySelectorAll("a");
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); if (!items.length) return;
+      sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((a, i) => a.classList.toggle("sel", i === sel));
+    } else if (e.key === "Enter" && items[sel]) location.href = items[sel].href;
+    else if (e.key === "Escape") sug.classList.remove("show");
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".hsearch")) sug.classList.remove("show"); });
 </script>
 </body>
 </html>

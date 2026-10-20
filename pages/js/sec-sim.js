@@ -1,4 +1,4 @@
-/* Simulateur de règle de sécurité — PAN Lab Helper (EDU-210 / PAN-OS 11.0)
+/* Simulateur de règle de sécurité — assistant PAN-OS 11.0
    Vanilla JS, aucune dépendance, aucun appel réseau. Utilise window.PAN (common.js). */
 (function () {
   "use strict";
@@ -10,17 +10,17 @@
   const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
 
   /* ======================================================
-     Données du lab (EDU-210 Labs 5-7)
+     Données par défaut (topologie type Trust / Untrust / DMZ, VR « default »)
      ====================================================== */
-  const ZONES = ["Users_Net", "Extranet", "Internet"];
-  const ZCLASS = { Users_Net: "users", Extranet: "extranet", Internet: "outside" };
+  const ZONES = ["Trust", "Untrust", "DMZ"];
+  const ZCLASS = { Trust: "inside", Untrust: "outside", DMZ: "dmz" };
   const ADDR = {
-    "Users_Net-Subnet": { cidr: ["192.168.1.0/24"], desc: "Réseau des clients (ethernet1/2)" },
-    "Client-A": { cidr: ["192.168.1.20/32"], desc: "Poste Client-A" },
-    "Extranet-Subnet": { cidr: ["192.168.50.0/24"], desc: "Réseau Extranet (ethernet1/3)" },
-    "Extranet-Web": { cidr: ["192.168.50.80/32"], desc: "Serveur web Extranet" },
-    "Google-DNS": { cidr: ["8.8.8.8/32"], desc: "Résolveur DNS public" },
-    "panw-bulletproof-ip-list": { edl: true, cidr: ["198.51.100.66/32"], label: "Palo Alto Networks - Bulletproof IP addresses" },
+    "Trust-Net": { cidr: ["192.168.1.0/24"], desc: "LAN interne (ethernet1/2, zone Trust)" },
+    "Admin-Net": { cidr: ["192.168.1.192/26"], desc: "Postes d'administration (zone Trust)" },
+    "DMZ-Net": { cidr: ["172.16.1.0/24"], desc: "Réseau DMZ (ethernet1/3)" },
+    "DMZ-Web": { cidr: ["172.16.1.10/32"], desc: "Serveur web DMZ (IP privée, post-NAT)" },
+    "Web-Public-IP": { cidr: ["203.0.113.20/32"], desc: "IP publique du serveur web (pré-NAT, DNAT vers 172.16.1.10)" },
+    "Public-DNS": { cidr: ["8.8.8.8/32", "1.1.1.1/32"], desc: "Résolveurs DNS publics autorisés" },
     "panw-highrisk-ip-list": { edl: true, cidr: ["198.51.100.77/32"], label: "Palo Alto Networks - High risk IP addresses" },
     "panw-known-ip-list": { edl: true, cidr: ["198.51.100.88/32"], label: "Palo Alto Networks - Known malicious IP addresses" },
   };
@@ -34,7 +34,7 @@
   };
   const SERVICES = { "application-default": null, any: null, "service-http": { tcp: [80, 8080] }, "service-https": { tcp: [443] } };
   const URLCATS = ["business-and-economy", "computer-and-internet-info", "social-networking", "news", "malware", "phishing"];
-  const TAGS = { "Internet-Access": ["color3", "#2563EB"], "Extranet": ["color7", "#7C3AED"], "Block": ["color1", "#DC2626"], "Lab6": ["color6", "#EA580C"], "Users": ["color2", "#16A34A"] };
+  const TAGS = { "Internet-Access": ["color3", "#2563EB"], "DMZ": ["color6", "#EA580C"], "Admin": ["color7", "#7C3AED"], "Block": ["color1", "#DC2626"], "Infra": ["color2", "#16A34A"] };
   const ACTIONS = { allow: "Allow", deny: "Deny", drop: "Drop", "reset-client": "Reset client", "reset-server": "Reset server", "reset-both": "Reset both client and server" };
   const ACT_HINT = {
     allow: "Autorise le trafic (action par défaut d'une nouvelle règle — pensez à la changer pour un blocage).",
@@ -52,8 +52,8 @@
     fb: { label: "File Blocking", cli: "file-blocking", opts: ["basic file blocking", "strict file blocking"] },
     wf: { label: "WildFire Analysis", cli: "wildfire-analysis", opts: ["default"] },
   };
-  const GROUPS = ["Corp-Profiles-Group"];
-  const LOGFWD = ["Log-Fwd-Panorama"];
+  const GROUPS = ["Std-Profiles"];
+  const LOGFWD = ["Log-Fwd-SIEM"];
   const TABS = [["general", "General"], ["source", "Source"], ["user", "User"], ["destination", "Destination"], ["application", "Application"], ["service", "Service/URL Category"], ["actions", "Actions"]];
 
   const blank = () => ({
@@ -64,16 +64,21 @@
   const mk = o => Object.assign(blank(), o);
   const clone = o => JSON.parse(JSON.stringify(o));
 
+  const STD = { ptype: "group", logEnd: true, logFwd: "Log-Fwd-SIEM" };
   const PRESETS = [
-    { k: "Lab 6 · tel quel", sub: "Users_Net → Internet, Application any, application-default, Allow", rule: mk({ name: "Users_to_Internet", desc: "Allows hosts in Users_Net zone to access Internet zone", from: ["Users_Net"], to: ["Internet"] }) },
-    { k: "Lab 6 · tel quel", sub: "Extranet → Internet, Application any, application-default, Allow", rule: mk({ name: "Extranet_to_Internet", desc: "Allows hosts in Extranet zone to access Internet zone", from: ["Extranet"], to: ["Internet"] }) },
-    { k: "Lab 6 durci · bonnes pratiques", sub: "App-ID précis + Corp-Profiles-Group + tags + log forwarding", rule: mk({ name: "Users_Web_Secure", desc: "Navigation web et DNS des utilisateurs Users_Net vers Internet, profils Corp-Profiles-Group", tags: ["Internet-Access", "Lab6"], type: "interzone", from: ["Users_Net"], to: ["Internet"], src: ["Users_Net-Subnet"], user: ["known-user"], app: ["dns", "ping", "ssl", "web-browsing"], ptype: "group", logFwd: LOGFWD[0] }) },
+    { k: "Accès Internet", sub: "Trust → Untrust, web (web-browsing, ssl) pour un groupe, application-default, Std-Profiles", rule: mk(Object.assign({ name: "Sales-to-Internet-Web", desc: "Navigation web du groupe Sales vers Internet (inclut facebook-base), profils Std-Profiles", tags: ["Internet-Access"], type: "interzone", from: ["Trust"], to: ["Untrust"], src: ["Trust-Net"], user: ["acme\\sales"], app: ["facebook-base", "ssl", "web-browsing"] }, STD)) },
+    { k: "Publication DMZ", sub: "Untrust → DMZ, IP publique (pré-NAT) du serveur web, web-browsing + ssl", rule: mk(Object.assign({ name: "Publish-Web-DMZ", desc: "Publication du serveur web DMZ-Web depuis Internet (DNAT 203.0.113.20 -> 172.16.1.10)", tags: ["DMZ"], type: "interzone", from: ["Untrust"], to: ["DMZ"], dst: ["Web-Public-IP"], app: ["ssl", "web-browsing"] }, STD)) },
+    { k: "Administration", sub: "Admin-Net → DMZ, ssh + ms-rdp, groupe it-admins (User-ID)", rule: mk(Object.assign({ name: "Admin-SSH-RDP-DMZ", desc: "Accès d'administration SSH/RDP aux serveurs DMZ depuis Admin-Net, groupe it-admins", tags: ["Admin"], type: "interzone", from: ["Trust"], to: ["DMZ"], src: ["Admin-Net"], user: ["acme\\it-admins"], dst: ["DMZ-Net"], app: ["ms-rdp", "ssh"] }, STD)) },
+    { k: "DNS sortant", sub: "Trust + DMZ → résolveurs publics autorisés uniquement, app dns", rule: mk(Object.assign({ name: "DNS-Outbound", desc: "Résolution DNS vers les résolveurs publics autorisés (limite le tunneling DNS)", tags: ["Infra"], type: "interzone", from: ["DMZ", "Trust"], to: ["Untrust"], dst: ["Public-DNS"], app: ["dns"] }, STD)) },
     { k: "Anti-exemple", sub: "any / any / any, Service any, sans profils ni logs : à ne jamais faire", rule: mk({ name: "Allow-All", svc: ["any"], logEnd: false }) },
   ];
+  const EDLS = ["panw-highrisk-ip-list", "panw-known-ip-list"];
   const seedRulebase = () => [
-    mk({ name: "Block-to-Known-Bad-Addresses", desc: "Blocks traffic from Users and Extranet to known bad IP addresses", from: ["Users_Net", "Extranet"], to: ["Internet"], dst: ["panw-bulletproof-ip-list", "panw-highrisk-ip-list", "panw-known-ip-list"], svc: ["any"], action: "deny" }),
-    mk({ name: "Block-from-Known-Bad-Addresses", desc: "Blocks traffic from known bad IP addresses to Users and Extranet", from: ["Internet"], to: ["Users_Net", "Extranet"], src: ["panw-bulletproof-ip-list", "panw-highrisk-ip-list", "panw-known-ip-list"], action: "deny" }),
-    mk({ name: "Users_to_Extranet", desc: "Allows hosts in Users_Net zone to access servers in Extranet zone", from: ["Users_Net"], to: ["Extranet"] }),
+    mk({ name: "Block-Malicious-IPs-Out", desc: "Bloque le trafic sortant vers les IP malveillantes / à haut risque (EDL Palo Alto Networks)", tags: ["Block"], from: ["DMZ", "Trust"], to: ["Untrust"], dst: EDLS.slice(), svc: ["any"], action: "drop" }),
+    mk({ name: "Block-Malicious-IPs-In", desc: "Bloque le trafic entrant depuis les IP malveillantes / à haut risque (EDL Palo Alto Networks)", tags: ["Block"], from: ["Untrust"], to: ["DMZ", "Trust"], src: EDLS.slice(), svc: ["any"], action: "drop" }),
+    mk(Object.assign({ name: "LAN-to-Internet", desc: "Accès Internet standard du LAN : web, TLS, DNS, NTP, ping", tags: ["Internet-Access"], type: "interzone", from: ["Trust"], to: ["Untrust"], src: ["Trust-Net"], app: ["dns", "ntp", "ping", "ssl", "web-browsing"] }, STD)),
+    mk(Object.assign({ name: "Allow-Web-DMZ", desc: "Accès des utilisateurs internes au serveur web DMZ", tags: ["DMZ"], type: "interzone", from: ["Trust"], to: ["DMZ"], src: ["Trust-Net"], dst: ["DMZ-Web"], app: ["ssl", "web-browsing"] }, STD)),
+    mk({ name: "Deny-All-Log", desc: "Règle de nettoyage : refuse et journalise tout le trafic inter-zones non autorisé", tags: ["Block"], type: "interzone", svc: ["any"], action: "deny", logFwd: "Log-Fwd-SIEM" }),
   ].map(r => Object.assign(r, { uid: uid(), hits: 0 }));
   const seedDefaults = () => [
     mk({ name: "intrazone-default", type: "intrazone", action: "allow", logEnd: false, svc: ["any"], def: true, uid: uid(), hits: 0 }),
@@ -101,7 +106,7 @@
   const ipInCidr = (ip, c) => { const p = parseCidr(c); return ((ipInt(ip) & p.mask) >>> 0) === p.net; };
   const cidrIn = (inner, outer) => { const i = parseCidr(inner), o = parseCidr(outer); return i.bits >= o.bits && ((i.net & o.mask) >>> 0) === o.net; };
   const isAny = a => !a.length || a[0] === "any";
-  const zoneForIp = ip => ipInCidr(ip, "192.168.1.0/24") ? "Users_Net" : ipInCidr(ip, "192.168.50.0/24") ? "Extranet" : "Internet";
+  const zoneForIp = ip => ipInCidr(ip, "192.168.1.0/24") ? "Trust" : ipInCidr(ip, "172.16.1.0/24") ? "DMZ" : "Untrust";
   const validIp = s => window.PAN ? PAN.ip.valid(s) : /^\d+\.\d+\.\d+\.\d+$/.test(s);
   const allRules = () => RB.concat(DEF);
   const byUid = id => allRules().find(r => r.uid === id);
@@ -287,10 +292,10 @@
     const allow = r.action === "allow";
     const ne = nameError(r.name);
     if (ne) add("bad", "Nom de règle", ne, 0, 8);
-    else if (/^(rule|r[eè]gle|test|new|copy|policy|regle)[\s_-]*\d*$/i.test(r.name)) add("warn", "Nom trop générique", "Un nom explicite décrit le flux (ex. Users_to_Internet).", 3, 8);
+    else if (/^(rule|r[eè]gle|test|new|copy|policy|regle)[\s_-]*\d*$/i.test(r.name)) add("warn", "Nom trop générique", "Un nom explicite décrit le flux (ex. LAN-to-Internet).", 3, 8);
     else add("ok", "Nom explicite", "« " + r.name + " »", 8, 8);
     const dl = r.desc.trim().length;
-    add(dl >= 12 ? "ok" : dl ? "warn" : "warn", "Description", dl >= 12 ? "Présente : la règle se comprend sans l'ouvrir." : dl ? "Trop courte : précisez qui, quoi, pourquoi." : "Optionnelle mais fortement recommandée (Lab 6).", dl >= 12 ? 7 : dl ? 3 : 0, 7);
+    add(dl >= 12 ? "ok" : dl ? "warn" : "warn", "Description", dl >= 12 ? "Présente : la règle se comprend sans l'ouvrir." : dl ? "Trop courte : précisez qui, quoi, pourquoi." : "Optionnelle mais fortement recommandée (audit, revue de règles).", dl >= 12 ? 7 : dl ? 3 : 0, 7);
     add(r.tags.length ? "ok" : "warn", "Tags", r.tags.length ? "Filtrage et groupage visuel (Tag-Based Rule Groups)." : "Ajoutez un tag pour filtrer/grouper la rulebase.", r.tags.length ? 5 : 0, 5);
     const fz = !isAny(r.from), tz = r.type === "intrazone" ? fz : !isAny(r.to);
     add(fz ? "ok" : "bad", "Source Zone précise", fz ? r.from.join(", ") : "Zone source « any » : la règle s'applique à toutes les zones.", fz ? 8 : 0, 8);
@@ -335,8 +340,8 @@
     const cleanup = last && last.action !== "allow" && isAny(last.from) && isAny(last.to) && isAny(last.src) && isAny(last.dst) && isAny(last.app);
     const iz = DEF[1];
     if (cleanup && last.logEnd) L.push({ s: "ok", t: "Rulebase : deny explicite en bas", d: "« " + last.name + " » journalise le trafic refusé." });
-    else if (iz.logEnd) L.push({ s: "ok", t: "Rulebase : trafic refusé journalisé", d: "interzone-default en Override avec Log at Session End (comme au Lab 6)." });
-    else L.push({ s: "warn", t: "Rulebase : trafic refusé invisible", d: "Ajoutez une règle deny explicite avec log en bas, ou Override interzone-default + Log at Session End (Lab 6)." });
+    else if (iz.logEnd) L.push({ s: "ok", t: "Rulebase : trafic refusé journalisé", d: "interzone-default en Override avec Log at Session End " });
+    else L.push({ s: "warn", t: "Rulebase : trafic refusé invisible", d: "Ajoutez une règle deny explicite avec log en bas, ou Override interzone-default + Log at Session End." });
     const mine = mineUid && byUid(mineUid);
     if (mine) {
       const sh = shadows().find(s => s.r.uid === mine.uid);
@@ -362,7 +367,7 @@
     $("#g-grade").textContent = score >= 90 ? "Excellente règle" : score >= 75 ? "Bonne règle, à peaufiner" : score >= 50 ? "Correcte mais risquée" : "Règle à risque";
     $("#g-grade").style.color = score >= 80 ? "#86EFAC" : score >= 50 ? "#FCD34D" : "#FCA5A5";
     const nb = s => all.filter(x => x.s === s).length;
-    $("#g-sum").textContent = `${nb("ok")} ✓ · ${nb("warn")} ⚠ · ${nb("bad")} ✗ — basé sur EDU-210 M06 et le guide d'administration PAN-OS 11.0.`;
+    $("#g-sum").textContent = `${nb("ok")} ✓ · ${nb("warn")} ⚠ · ${nb("bad")} ✗ — best practices PAN-OS 11.0.`;
     const icon = { ok: "✓", warn: "!", bad: "✕", info: "i" }, sr = { ok: "conforme", warn: "à améliorer", bad: "problème", info: "information" };
     const order = { bad: 0, warn: 1, info: 2, ok: 3 };
     $("#recos").innerHTML = all.slice().sort((a, b) => order[a.s] - order[b.s]).map((x, i) =>
@@ -494,7 +499,9 @@
     else {
       ins = Object.assign(clone(R), { uid: uid(), hits: 0 });
       const sel = selected && byUid(selected);
-      const at = sel && !sel.def ? RB.indexOf(sel) + 1 : RB.length;
+      const lastR = RB[RB.length - 1];
+      const cleanup = lastR && lastR.action !== "allow" && isAny(lastR.from) && isAny(lastR.to) && isAny(lastR.src) && isAny(lastR.dst) && isAny(lastR.app);
+      const at = sel && !sel.def ? RB.indexOf(sel) + 1 : cleanup ? RB.length - 1 : RB.length;
       RB.splice(at, 0, ins); mineUid = ins.uid;
       toast("Règle « " + R.name + " » ajoutée en position " + (at + 1));
     }
@@ -543,7 +550,7 @@
       afterRulebaseChange({ flash: r.uid });
     });
     $("#t-reset").addEventListener("click", () => { const r = byUid(selected); if (!r) return; r.hits = 0; toast("Hit count remis à 0 : " + r.name); renderRulebase(); });
-    $("#t-restore").addEventListener("click", () => { RB = seedRulebase(); DEF = seedDefaults(); mineUid = null; selected = null; toast("Rulebase du Lab 6 restaurée"); afterRulebaseChange(); });
+    $("#t-restore").addEventListener("click", () => { RB = seedRulebase(); DEF = seedDefaults(); mineUid = null; selected = null; toast("Rulebase initiale restaurée"); afterRulebaseChange(); });
     $("#rb-alert").addEventListener("click", e => {
       const b = e.target.closest("[data-fix]"); if (!b) return;
       const r = byUid(b.dataset.fix), above = byUid(b.dataset.above);
@@ -580,16 +587,17 @@
      Testeur de flux
      ====================================================== */
   const FLOWS = [
-    { l: "Ping Extranet (Lab 6)", f: { src: "192.168.1.20", dst: "192.168.50.80", app: "ping", proto: "1", port: "" } },
-    { l: "Web Extranet", f: { src: "192.168.1.20", dst: "192.168.50.80", app: "web-browsing", proto: "6", port: "80" } },
-    { l: "Ping 8.8.8.8 (Lab 6)", f: { src: "192.168.1.20", dst: "8.8.8.8", app: "ping", proto: "1", port: "" } },
-    { l: "DNS 8.8.8.8", f: { src: "192.168.1.20", dst: "8.8.8.8", app: "dns", proto: "17", port: "53" } },
-    { l: "SSH sur port 80 (évasion)", f: { src: "192.168.1.20", dst: "203.0.113.99", app: "ssh", proto: "6", port: "80" } },
-    { l: "Facebook (alice)", f: { src: "192.168.1.20", dst: "157.240.1.35", app: "facebook-base", proto: "6", port: "443", user: "acme\\alice", url: "social-networking" } },
-    { l: "Vers IP malveillante", f: { src: "192.168.1.20", dst: "198.51.100.88", app: "ssl", proto: "6", port: "443" } },
-    { l: "Internet → Client-A RDP", f: { src: "198.51.100.200", dst: "192.168.1.20", app: "ms-rdp", proto: "6", port: "3389" } },
-    { l: "Intrazone Users_Net", f: { src: "192.168.1.20", dst: "192.168.1.30", app: "ssh", proto: "6", port: "22" } },
-    { l: "DNAT Lab 7 (192.168.1.80)", f: { src: "192.168.1.20", dst: "192.168.1.80", to: "Extranet", app: "web-browsing", proto: "6", port: "80" } },
+    { l: "LAN → web Internet (443)", f: { src: "192.168.1.50", dst: "93.184.216.34", app: "ssl", proto: "6", port: "443" } },
+    { l: "LAN → DNS 8.8.8.8", f: { src: "192.168.1.50", dst: "8.8.8.8", app: "dns", proto: "17", port: "53" } },
+    { l: "LAN → ping Internet", f: { src: "192.168.1.50", dst: "8.8.8.8", app: "ping", proto: "1", port: "" } },
+    { l: "SSH sur port 80 (évasion)", f: { src: "192.168.1.50", dst: "203.0.113.99", app: "ssh", proto: "6", port: "80" } },
+    { l: "Facebook (alice, sales)", f: { src: "192.168.1.50", dst: "157.240.1.35", app: "facebook-base", proto: "6", port: "443", user: "acme\\alice", url: "social-networking" } },
+    { l: "LAN → IP malveillante", f: { src: "192.168.1.50", dst: "198.51.100.88", app: "ssl", proto: "6", port: "443" } },
+    { l: "LAN → web DMZ", f: { src: "192.168.1.50", dst: "172.16.1.10", app: "web-browsing", proto: "6", port: "80" } },
+    { l: "Admin RDP → DMZ (bob)", f: { src: "192.168.1.200", dst: "172.16.1.10", app: "ms-rdp", proto: "6", port: "3389", user: "acme\\bob" } },
+    { l: "Internet → RDP LAN", f: { src: "198.51.100.200", dst: "192.168.1.50", app: "ms-rdp", proto: "6", port: "3389" } },
+    { l: "Intrazone Trust", f: { src: "192.168.1.50", dst: "192.168.1.60", app: "ssh", proto: "6", port: "22" } },
+    { l: "Internet → web publié (DNAT)", f: { src: "198.51.100.200", dst: "203.0.113.20", to: "DMZ", app: "web-browsing", proto: "6", port: "80" } },
   ];
   function buildTester() {
     const zo = ZONES.map(z => `<option>${z}</option>`).join("");
@@ -612,7 +620,7 @@
     $("#flowForm").addEventListener("input", () => renderTestCli());
     $("#flowForm").addEventListener("change", () => renderTestCli());
     $("#flowForm").addEventListener("submit", e => { e.preventDefault(); runTest(); });
-    $("#try-dnat").addEventListener("click", () => { setFlow(FLOWS[9].f); $("#tester").scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); setTimeout(runTest, reduce ? 0 : 500); });
+    $("#try-dnat").addEventListener("click", () => { setFlow(FLOWS[10].f); $("#tester").scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); setTimeout(runTest, reduce ? 0 : 500); });
     setFlow(FLOWS[2].f);
   }
   function syncProto() { const icmp = $("#t-proto").value === "1"; $("#t-port").disabled = icmp; if (icmp) $("#t-port").value = ""; }
@@ -693,11 +701,12 @@
     }
     const v = $("#verdict");
     const logTxt = hit.logEnd ? `Entrée visible dans <b>Monitor &gt; Logs &gt; Traffic</b> (Log at Session End), règle « ${esc(hit.name)} »${hit.logStart ? " + entrée de début de session" : ""}.`
-      : `<b>Aucun log</b> : « ${esc(hit.name)} » ne journalise pas${hit.def ? " (règle par défaut sans Override — exactement la question du Lab 6 sur le ping 8.8.8.8)" : ""}.`;
+      : `<b>Aucun log</b> : « ${esc(hit.name)} » ne journalise pas${hit.def ? " (règle par défaut sans Override : le trafic refusé est invisible dans le Traffic log)" : ""}.`;
     let extra = "";
     if (allow && hit.ptype === "none" && !hit.def) extra = `<p class="small" style="margin-top:6px">⚠ Autorisé sans Security Profile : aucune inspection Content-ID.</p>`;
-    if (allow && f.to === "Internet" && ZONES.includes(f.from) && f.from !== "Internet" && /^192\.168\./.test(f.src)) extra += `<p class="small mut" style="margin-top:6px">Rappel Lab 6 : autorisé ≠ joignable. Sans NAT source (Lab 7, Inside_Nets_to_Internet), l'IP privée ${esc(f.src)} ne reçoit pas de réponse d'Internet.</p>`;
-    if (f.dst === "192.168.1.80" && f.to === "Extranet") extra += `<p class="small mut" style="margin-top:6px">DNAT : destination pré-NAT 192.168.1.80, zone post-NAT Extranet (serveur réel 192.168.50.80).</p>`;
+    if (allow && f.to === "Untrust" && /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(f.src)) extra += `<p class="small mut" style="margin-top:6px">Autorisé ≠ joignable : vérifiez qu'une règle de NAT source traduit ${esc(f.src)} vers une IP publique (ex. 203.0.113.10, ethernet1/1).</p>`;
+    if (f.dst === "203.0.113.20" && f.to === "DMZ") extra += `<p class="small mut" style="margin-top:6px">DNAT : destination pré-NAT 203.0.113.20 (Web-Public-IP), zone post-NAT DMZ (serveur réel 172.16.1.10).</p>`;
+    if (!allow && hit.name === "Deny-All-Log") extra += `<p class="small mut" style="margin-top:6px">Aucune règle allow ne couvre ce flux : il tombe sur la règle de nettoyage, journalisée.</p>`;
     v.className = "verdict show " + (allow ? "allow" : "block");
     v.innerHTML = `<h3>${allow ? "✅ Allow" : "⛔ " + esc(ACTIONS[hit.action])} <span class="badge ${allow ? "ok" : "bad"}">${esc(hit.name)}</span></h3>
       <p class="small">Première règle correspondante en position ${rules.indexOf(hit) + 1} : les règles suivantes ne sont pas évaluées. Hit count → ${hit.hits}.</p>
@@ -749,7 +758,7 @@
       if (i === 0) s(`move rulebase security rules ${n} top`); else s(`move rulebase security rules ${n} after ${q(RB[i - 1].name)}`);
     } else c("# (nouvelle règle : ajoutée en bas des règles personnalisées, au-dessus des règles par défaut)");
     if (DEF[1].overridden || DEF[0].overridden) {
-      lines.push(""); c("# --- Override des règles par défaut (Lab 6) ---");
+      lines.push(""); c("# --- Override des règles par défaut ---");
       if (DEF[1].overridden) s(`set rulebase default-security-rules rules interzone-default action deny log-end yes`);
       if (DEF[0].overridden) s(`set rulebase default-security-rules rules intrazone-default action allow log-end yes`);
     }
@@ -771,7 +780,7 @@
     $("#type-hint").textContent = { universal: "universal : trafic intra- ET inter-zones (valeur par défaut).", intrazone: "intrazone : trafic à l'intérieur d'une même zone ; la zone de destination est celle de la source.", interzone: "interzone : uniquement le trafic entre zones différentes." }[R.type];
     $("#app-hint").textContent = isAny(R.app) ? "any : la règle ne tire aucun profit d'App-ID. Ajoutez les applications nécessaires (puis leurs dépendances)." : "Applications : " + R.app.join(", ") + ". Les ports par défaut sont ceux d'Applipedia (simplifiés ici).";
     const sv = R.svc[0];
-    $("#svc-hint").textContent = sv === "application-default" ? "application-default : ex. web-browsing seulement sur TCP 80, ssl sur TCP 443 (Lab 6)." : sv === "any" ? "any : l'application est autorisée sur tous les ports." : "service-http (TCP 80, 8080) et service-https (TCP 443) sont les seuls services prédéfinis.";
+    $("#svc-hint").textContent = sv === "application-default" ? "application-default : ex. web-browsing seulement sur TCP 80, ssl sur TCP 443." : sv === "any" ? "any : l'application est autorisée sur tous les ports." : "service-http (TCP 80, 8080) et service-https (TCP 443) sont les seuls services prédéfinis.";
     $("#act-hint").textContent = ACT_HINT[R.action];
     const ne = R.name ? nameError(R.name) : "";
     $("#name-err").textContent = ne; $("#f-name").classList.toggle("invalid", !!ne);

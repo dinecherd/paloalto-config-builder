@@ -1,28 +1,39 @@
-# 🛡️ PAN Lab Helper — EDU-210 (PAN-OS 11.0)
+# 🛡️ PAN Config Builder — configurateur Palo Alto (PAN-OS 11.0)
 
-Outil d'aide interactif pour configurer un pare-feu Palo Alto Networks **de la bonne manière**, basé sur le cursus **EDU-210** (Firewall Essentials: Configuration and Management).
+Outil web pour configurer un pare-feu Palo Alto Networks chez n'importe quel client : **tu saisis tes informations, l'outil les valide et génère la configuration**, au choix :
 
-> Tu as une IP source, une destination et un port ? Le simulateur te génère la **règle NAT**, la **règle de sécurité** associée, les écrans WebUI à remplir et les commandes CLI.
+- 🖱️ **Mode GUI** : le pas-à-pas WebUI, étape par étape (chemin de menu, onglet, valeurs à saisir), chaque étape cochable « Fait ».
+- ⌨️ **Mode CLI** : les commandes `set` prêtes à coller en SSH, avec `commit` et les commandes de vérification.
 
-## ✨ Contenu
+## Contenu (68 modules)
 
-| Page | Description |
+| Catégorie | Exemples |
 |---|---|
-| **Accueil** | Présentation, menu, règle d'or du NAT, programme EDU-210 |
-| **Simulateur NAT** | Source NAT (DIPP), Destination NAT, Static/bidirectionnel, U-turn + règle de sécurité associée, flux animé, CLI |
-| **Simulateur de règle de sécurité** | Constructeur onglet par onglet, score bonnes pratiques, rulebase avec détection de shadowing, test de flux |
-| **Guide Sécurité** | Tuto pas-à-pas (Lab 6) |
-| **Guide NAT** | Tutos S-NAT et D-NAT pas-à-pas (Lab 7) |
-| **Quiz** | Entraînement EDU-210 / PCNSA |
+| **Déploiement standard client** | Config de base complète en un formulaire : système, management, WAN/LAN/DMZ, routage, NAT, publication serveur, règles, profils, mises à jour |
+| Système & management | Hostname/DNS/NTP, interface de management, mises à jour dynamiques, sécurisation admin |
+| Sauvegarde & config | Snapshots, export, restauration, commit partiel |
+| Comptes administrateurs | Admin roles, comptes locaux, complexité MDP, LDAP/RADIUS/TACACS+ |
+| Interfaces, zones & routage | Zones, interfaces L3, sous-interfaces VLAN, Mgmt profile, virtual router, DHCP, vwire, L2, tap |
+| Règles de sécurité & NAT | Objets, tags, règle de sécurité, SNAT DIPP / pool, static 1:1, DNAT, U-turn |
+| App-ID, profils, URL | Filtres/groupes d'apps, AV, Anti-Spyware (sinkhole), Vulnérabilités, File Blocking, URL, EDL |
+| WildFire, User-ID, Décryptage | Profils WildFire, LDAP/group mapping, server monitoring, auth portal, certificats, SSL forward proxy |
+| Logs | Syslog, alertes e-mail, SNMP, rapports, générateur de filtres de logs |
+| VPN, HA & protections | IPsec site-à-site, GlobalProtect, HA actif/passif, Zone Protection, DoS, service routes |
 
-## 🚀 Utilisation
+Plus deux assistants visuels : **Assistant NAT** (flux animé avant/après NAT) et **Assistant Règle** (score bonnes pratiques, rulebase, test de flux).
+
+## Utilisation
 
 - **En ligne** : via GitHub Pages.
-- **En local** : télécharge le dépôt et ouvre `index.html` dans ton navigateur — aucun serveur ni installation requis (HTML/CSS/JS pur).
+- **En local** : télécharge le dépôt et ouvre `index.html` — aucun serveur ni installation (HTML/CSS/JS pur).
+
+## Ajouter un module
+
+Chaque module est une simple définition déclarative (`PAN.cfg.register({...})`) dans `assets/js/modules/`. Voir l'en-tête de `assets/js/engine.js`.
 
 ## ⚠️ Avertissement
 
-Projet pédagogique **non officiel**. Palo Alto Networks, PAN-OS et EDU-210 sont des marques de leurs propriétaires respectifs. Vérifie toujours avec la documentation officielle avant toute mise en production.
+Outil non officiel. Relis toujours la configuration générée et teste-la avant toute mise en production. Certaines syntaxes CLI avancées (GlobalProtect, HA, User-ID agent…) sont à valider sur ta version de PAN-OS : en cas de refus, utilise `?` dans la CLI ou le mode GUI.
 
 ---
 Conçu par **Dinèche RADJOU**

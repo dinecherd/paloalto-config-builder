@@ -1,5 +1,5 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Simulateur de règle de sécurité · PAN Lab Helper</title>
-<meta name="description" content="Construisez une règle de sécurité PAN-OS 11.0 pas à pas, obtenez un score bonnes pratiques, détectez le shadowing et testez un flux (évaluation top-down).">
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Simulateur de règle de sécurité · PAN Config Builder</title>
+<meta name="description" content="Assistant de création de règles de sécurité PAN-OS 11.0 : WebUI en direct, score best practices, détection de shadowing, test de flux et CLI prête à coller.">
 <link rel="stylesheet" href="../assets/css/style.css"><link rel="stylesheet" href="css/sec-sim.css"></head>
 <body data-root="../" data-page="sec-sim"><div id="site-nav"></div>
 <main id="main">
@@ -7,42 +7,43 @@
 <!-- ============ 1. HERO ============ -->
 <section class="ss-hero"><div class="wrap">
   <div data-reveal>
-    <span class="kicker">Module 6 · Lab 6 · Policies &gt; Security</span>
-    <h1>Créer une règle de sécurité <span class="grad">de la bonne manière</span></h1>
-    <p class="lead">Remplissez la règle, regardez la WebUI PAN-OS se compléter en direct, visez 100/100 au score bonnes pratiques, insérez-la dans la rulebase, puis envoyez un paquet : il descend les règles de haut en bas et s'arrête à la <b>première</b> qui correspond.</p>
+    <span class="kicker">Policies &gt; Security · PAN-OS 11.0</span>
+    <h1>Assistant de règle de sécurité <span class="grad">best practices</span></h1>
+    <p class="lead">Composez la règle, contrôlez-la dans un aperçu de la WebUI, mesurez sa conformité aux best practices, placez-la dans la rulebase sans shadowing, validez un flux réel puis copiez la CLI.</p>
     <div class="row">
-      <a class="btn primary" href="#builder">Construire ma règle</a>
+      <a class="btn primary" href="#builder">Créer une règle</a>
       <a class="btn ghost" href="#tester">Tester un flux</a>
       <span class="badge or">PAN-OS 11.0</span><span class="badge">Top-down · first match</span>
     </div>
   </div>
   <div class="hero-viz" data-reveal="zoom" aria-hidden="true">
     <span class="hv-packet"></span>
-    <div class="hv-rule">1 Block-to-Known-Bad-Addresses<b class="deny">deny</b></div>
-    <div class="hv-rule">2 Block-from-Known-Bad-Addresses<b class="deny">deny</b></div>
-    <div class="hv-rule">3 Users_to_Extranet<b class="allow">allow</b></div>
-    <div class="hv-rule hit">4 Users_to_Internet<b class="allow">allow</b></div>
+    <div class="hv-rule">1 Block-Malicious-IPs-Out<b class="deny">drop</b></div>
+    <div class="hv-rule">2 Block-Malicious-IPs-In<b class="deny">drop</b></div>
+    <div class="hv-rule">3 Allow-Web-DMZ<b class="allow">allow</b></div>
+    <div class="hv-rule hit">4 LAN-to-Internet<b class="allow">allow</b></div>
+    <div class="hv-rule">5 Deny-All-Log<b class="deny">deny</b></div>
     <div class="hv-rule def">intrazone-default<b class="allow">allow</b></div>
     <div class="hv-rule def">interzone-default<b class="deny">deny</b></div>
-    <p class="hv-note">ping 8.8.8.8 depuis Client-A → match règle 4, évaluation stoppée</p>
+    <p class="hv-note">Trust → Untrust, ssl/443 → match règle 4, évaluation stoppée</p>
   </div>
 </div></section>
 
 <!-- ============ 2-3. CONSTRUCTEUR + SCORE ============ -->
 <section id="builder" style="padding-top:30px"><div class="wrap">
   <div class="sec-head" data-reveal>
-    <span class="kicker">Étape 1 · Constructeur</span>
+    <span class="kicker">1 · Constructeur</span>
     <h2>Policies &gt; Security &gt; <span class="grad">Add</span></h2>
-    <p class="lead">Chargez un exemple du Lab 6 ou partez de zéro. Chaque champ correspond à un onglet de la fenêtre <i>Security Policy Rule</i> de la WebUI (termes en anglais, comme sur le pare-feu).</p>
+    <p class="lead">Partez d'un modèle courant ou d'une règle vierge. Chaque bloc correspond à un onglet de la fenêtre <i>Security Policy Rule</i> (termes WebUI en anglais). Objets par défaut : zones Trust (192.168.1.0/24), Untrust (203.0.113.10/24), DMZ (172.16.1.0/24), VR « default ».</p>
   </div>
 
-  <div class="presets" id="presets" role="group" aria-label="Exemples du lab à charger"></div>
+  <div class="presets" id="presets" role="group" aria-label="Modèles de règles à charger"></div>
 
   <div class="builder">
     <form id="ruleForm" novalidate autocomplete="off" aria-label="Constructeur de règle de sécurité">
       <fieldset class="fs" data-tab="general"><legend>General <small>identité de la règle</small></legend>
         <div class="field"><label for="f-name">Name <span class="mut small">(nom explicite, unique, 63 car. max)</span></label>
-          <input type="text" id="f-name" maxlength="63" placeholder="ex. Users_to_Internet" aria-describedby="name-err"><div class="err-inline" id="name-err" aria-live="polite"></div></div>
+          <input type="text" id="f-name" maxlength="63" placeholder="ex. LAN-to-Internet" aria-describedby="name-err"><div class="err-inline" id="name-err" aria-live="polite"></div></div>
         <div class="field"><label for="f-desc">Description <span class="mut small">(optionnelle mais fortement recommandée)</span></label>
           <textarea id="f-desc" rows="2" maxlength="1024" placeholder="Que fait la règle, pour qui, pourquoi ?"></textarea></div>
         <div class="field"><span class="lbl" id="l-tags">Tags <span class="mut small">(Objects &gt; Tags)</span></span><div class="chips" id="c-tags" role="group" aria-labelledby="l-tags"></div></div>
@@ -125,7 +126,7 @@
           <div>
             <span class="kicker">Score bonnes pratiques</span>
             <div class="grade" id="g-grade">—</div>
-            <p class="small mut" id="g-sum">Basé sur EDU-210 M06 et le guide d'administration PAN-OS 11.0.</p>
+            <p class="small mut" id="g-sum">Best practices PAN-OS 11.0.</p>
           </div>
         </div>
         <ul class="recos" id="recos" aria-live="polite"></ul>
@@ -137,9 +138,9 @@
 <!-- ============ 4. RULEBASE ============ -->
 <section id="rulebase"><div class="wrap">
   <div class="sec-head" data-reveal>
-    <span class="kicker">Étape 2 · Rulebase</span>
-    <h2>L'ordre des règles <span class="grad">change tout</span></h2>
-    <p class="lead">Les règles sont évaluées de haut en bas ; dès qu'une règle correspond, les suivantes ne sont plus évaluées. <b>intrazone-default</b> (allow) et <b>interzone-default</b> (deny) restent toujours en bas et, par défaut, <b>ne journalisent pas</b>.</p>
+    <span class="kicker">2 · Rulebase</span>
+    <h2>Placement et <span class="grad">shadowing</span></h2>
+    <p class="lead">Rulebase client type. Évaluation top-down, first match. <b>intrazone-default</b> (allow) et <b>interzone-default</b> (deny) restent en bas et ne journalisent pas par défaut, d'où la règle de nettoyage <b>Deny-All-Log</b>.</p>
   </div>
 
   <div class="rb-alert" id="rb-alert" aria-live="assertive"></div>
@@ -166,7 +167,7 @@
       <button type="button" class="pan-btn" id="t-toggle">Disable</button>
       <button type="button" class="pan-btn" id="t-override">Override</button>
       <button type="button" class="pan-btn" id="t-reset">Reset Rule Hit Counter</button>
-      <button type="button" class="pan-btn" id="t-restore">Rulebase du lab</button>
+      <button type="button" class="pan-btn" id="t-restore">Rulebase initiale</button>
     </div>
   </div>
   <p class="small mut" style="margin-top:8px" id="rb-sel" aria-live="polite">Cliquez sur une ligne pour la sélectionner (clavier : Tab puis Entrée).</p>
@@ -177,22 +178,22 @@
   </div>
 
   <div class="grid g3" style="margin-top:22px">
-    <div class="callout or" data-reveal><b>Shadowing (règle masquée)</b>Une règle placée plus haut, plus générale, « fait de l'ombre » à une règle plus bas : celle-ci ne sera jamais atteinte. Le commit le signale dans l'onglet <i>Rule Shadow</i> de la fenêtre Commit Status. Corrigez en réordonnant ou en affinant.</div>
-    <div class="callout" data-reveal data-delay="100"><b>Ajout d'une règle</b>Comme dans la WebUI : si une règle est sélectionnée, <i>Add</i> insère la nouvelle règle juste en dessous ; sinon au-dessus des règles par défaut. Les numéros de ligne ne suivent pas la règle quand on la déplace.</div>
-    <div class="callout warn" data-reveal data-delay="200"><b>Règles par défaut</b>On ne peut ni les déplacer ni les supprimer, seulement les <i>Override</i> (ex. Lab 6 : cocher <i>Log at Session End</i> sur interzone-default pour voir les flux refusés dans le Traffic log).</div>
+    <div class="callout or"><b>Rule Shadow</b>Une règle plus générale placée au-dessus masque entièrement la suivante (hit count à 0). Signalé à la validation dans l'onglet <i>Rule Shadow</i> du Commit Status.</div>
+    <div class="callout"><b>Insertion</b><i>Add</i> insère sous la règle sélectionnée ; sinon juste au-dessus de la règle de nettoyage (deny any finale), ou des règles par défaut.</div>
+    <div class="callout warn"><b>Règles par défaut</b>Non déplaçables ni supprimables : seulement <i>Override</i> (ex. activer Log at Session End sur interzone-default).</div>
   </div>
 </div></section>
 
 <!-- ============ 5. TESTER UN FLUX ============ -->
 <section id="tester"><div class="wrap">
   <div class="sec-head" data-reveal>
-    <span class="kicker">Étape 3 · Test Policy Match</span>
-    <h2>Envoyez un paquet <span class="grad">dans la rulebase</span></h2>
+    <span class="kicker">3 · Test Policy Match</span>
+    <h2>Valider un flux <span class="grad">avant le commit</span></h2>
     <p class="lead">Équivalent de <i>Policies &gt; Security &gt; Test Policy Match</i> ou de la commande CLI <code>test security-policy-match</code>. Saisissez les IP <b>pré-NAT</b> et la zone de destination <b>post-NAT</b>.</p>
   </div>
   <div class="tester">
     <form class="card" id="flowForm" novalidate autocomplete="off" aria-label="Paramètres du flux à tester">
-      <span class="lbl">Flux types du lab</span>
+      <span class="lbl">Flux types</span>
       <div class="flow-presets" id="flow-presets"></div>
       <div class="f3">
         <div class="field"><label for="t-src">Source IP</label><input type="text" id="t-src" inputmode="decimal"><div class="err-inline" id="t-src-err" aria-live="polite"></div></div>
@@ -205,7 +206,7 @@
         <div class="field"><label for="t-user">Source User</label><select id="t-user"></select></div>
         <div class="field"><label for="t-url">URL Category (si web)</label><select id="t-url"></select></div>
       </div>
-      <p class="hint" style="margin:-4px 0 12px">La zone est proposée automatiquement d'après l'IP (sous-réseaux du Lab 5 : 192.168.1.0/24 → Users_Net, 192.168.50.0/24 → Extranet, reste → Internet) ; dans la réalité elle dépend de l'interface et de la route.</p>
+      <p class="hint" style="margin:-4px 0 12px">Zone proposée d'après l'IP (192.168.1.0/24 → Trust, 172.16.1.0/24 → DMZ, reste → Untrust) ; sur le pare-feu elle dépend de l'interface et de la route. Pour un DNAT, gardez l'IP publique et choisissez la zone post-NAT.</p>
       <button type="submit" class="btn primary" id="t-run">▶ Lancer le test</button>
     </form>
     <div>
@@ -222,7 +223,7 @@
 <!-- ============ 6. CLI ============ -->
 <section id="cli"><div class="wrap">
   <div class="sec-head" data-reveal>
-    <span class="kicker">Étape 4 · CLI</span>
+    <span class="kicker">4 · CLI</span>
     <h2>La même règle <span class="grad">en CLI PAN-OS</span></h2>
     <p class="lead">Commandes générées en direct à partir du constructeur (mode configuration). Les objets nécessaires sont créés avant la règle ; la position suit celle de votre règle dans la rulebase ci-dessus.</p>
   </div>
@@ -236,52 +237,26 @@
   </div>
 </div></section>
 
-<!-- ============ 8. ORDRE DE TRAITEMENT ============ -->
-<section id="flow"><div class="wrap">
-  <div class="sec-head" data-reveal>
-    <span class="kicker">Rappel · Flow logic (M06)</span>
-    <h2>Où intervient la règle de sécurité ?</h2>
-    <p class="lead">Ordre simplifié du traitement d'un nouveau paquet (diapo « Flow Logic of the Next-Generation Firewall »).</p>
-  </div>
-  <div class="pipe">
-    <div class="pstep" style="--i:0" data-reveal><b>Session existante ?</b><p>Si le paquet appartient à une session déjà établie, il est traité directement (fast path).</p></div>
-    <div class="pstep" style="--i:1" data-reveal data-delay="60"><b>Zone source</b><p>Déterminée par l'interface d'entrée. Zone Protection / DoS Protection.</p></div>
-    <div class="pstep key" style="--i:2" data-reveal data-delay="120"><b>Forwarding lookup</b><p>PBF puis route → interface de sortie → <b>zone de destination</b>, avec vérification <b>DNAT</b> (zone post-NAT).</p></div>
-    <div class="pstep key" style="--i:3" data-reveal data-delay="180"><b>Security Policy check</b><p>Sur les adresses <b>pré-NAT</b>. À ce stade l'application n'est pas encore connue (App-ID ignoré).</p></div>
-    <div class="pstep" style="--i:4" data-reveal data-delay="240"><b>Session créée</b><p>Attribution d'un Session ID. La politique NAT a été évaluée ; elle sera appliquée à la sortie.</p></div>
-    <div class="pstep key" style="--i:5" data-reveal data-delay="300"><b>App-ID</b><p>L'application est identifiée ; la règle de sécurité est réévaluée avec l'application réelle.</p></div>
-    <div class="pstep" style="--i:6" data-reveal data-delay="360"><b>Content-ID</b><p>Les Security Profiles attachés à la règle allow inspectent le contenu (AV, Anti-Spyware, Vuln, URL, File Blocking, WildFire).</p></div>
-    <div class="pstep" style="--i:7" data-reveal data-delay="420"><b>Forward</b><p>Ré-encryption si déchiffré, NAT appliquée, paquet transmis.</p></div>
-  </div>
-
-  <div class="nat-box">
-    <div class="card" data-reveal>
-      <h3>Règle de sécurité + NAT</h3>
-      <p class="mut">Règle d'or EDU-210 (M07) : dans une règle de sécurité, les <b>adresses IP sont pré-NAT</b> (celles du paquet d'origine) et la <b>zone de destination est post-NAT</b> (celle où se trouve réellement l'hôte final).</p>
-      <a class="btn sm" style="margin-top:14px" href="simulateur-nat.html">Ouvrir le simulateur NAT →</a>
+<!-- ============ 5. ORDRE DE TRAITEMENT (replié) ============ -->
+<section id="flow" style="padding-top:20px"><div class="wrap">
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:800;font-size:18px">Ordre de traitement PAN-OS (rappel)</summary>
+    <div class="pipe" style="margin-top:16px">
+      <div class="pstep" style="--i:0"><b>Session existante ?</b><p>Oui → fast path.</p></div>
+      <div class="pstep" style="--i:1"><b>Zone source</b><p>Interface d'entrée, Zone/DoS Protection.</p></div>
+      <div class="pstep key" style="--i:2"><b>Forwarding lookup</b><p>PBF / route → zone de destination, avec DNAT (zone post-NAT).</p></div>
+      <div class="pstep key" style="--i:3"><b>Security policy</b><p>IP pré-NAT ; App-ID pas encore connu.</p></div>
+      <div class="pstep" style="--i:4"><b>Session créée</b><p>NAT évaluée, appliquée en sortie.</p></div>
+      <div class="pstep key" style="--i:5"><b>App-ID</b><p>Règle réévaluée avec l'application réelle.</p></div>
+      <div class="pstep" style="--i:6"><b>Content-ID</b><p>Security Profiles de la règle allow.</p></div>
+      <div class="pstep" style="--i:7"><b>Forward</b><p>NAT appliquée, paquet émis.</p></div>
     </div>
-    <div class="card" data-reveal data-delay="100">
-      <h3>Exemple du Lab 7 (DNAT)</h3>
-      <p class="mut small">Dest_NAT_To_Webserver : Client-A ouvre http://192.168.1.80, traduit vers le serveur 192.168.50.80 de l'Extranet.</p>
-      <dl class="kv">
-        <dt>Source Zone</dt><dd><span class="zone users">Users_Net</span></dd>
-        <dt>Destination Zone</dt><dd><span class="zone extranet">Extranet</span> (post-NAT)</dd>
-        <dt>Destination Address</dt><dd>192.168.1.80 (pré-NAT)</dd>
-        <dt>Règle qui matche</dt><dd>Users_to_Extranet</dd>
-      </dl>
-      <button type="button" class="btn sm ghost" style="margin-top:12px" id="try-dnat">Tester ce flux ↑</button>
+    <div class="nat-box">
+      <div class="callout or" style="margin:0"><b>Règle de sécurité + NAT</b>Adresses <b>pré-NAT</b>, zone de destination <b>post-NAT</b>. <a href="simulateur-nat.html">Simulateur NAT →</a></div>
+      <div class="callout" style="margin:0"><b>DNAT · publication web</b>Untrust → <b>DMZ</b>, destination <b>203.0.113.20</b> (pas 172.16.1.10). <button type="button" class="btn sm ghost" style="margin-top:8px" id="try-dnat">Tester ce flux ↑</button></div>
+      <div class="callout" style="margin:0"><b>SNAT · sortie Internet</b>Trust → Untrust, source <b>192.168.1.0/24</b> (pas 203.0.113.10).</div>
     </div>
-    <div class="card" data-reveal data-delay="200">
-      <h3>Exemple du Lab 7 (SNAT)</h3>
-      <p class="mut small">Inside_Nets_to_Internet : 192.168.1.20 sort en 203.0.113.20 (ethernet1/1).</p>
-      <dl class="kv">
-        <dt>Source Zone</dt><dd><span class="zone users">Users_Net</span></dd>
-        <dt>Destination Zone</dt><dd><span class="zone outside">Internet</span></dd>
-        <dt>Source Address</dt><dd>192.168.1.20 (pré-NAT, pas 203.0.113.20)</dd>
-        <dt>Règle qui matche</dt><dd>Users_to_Internet</dd>
-      </dl>
-    </div>
-  </div>
+  </details>
 </div></section>
 </main>
 <div id="site-foot"></div><script src="../assets/js/common.js"></script><script src="js/sec-sim.js"></script></body></html>

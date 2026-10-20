@@ -1,4 +1,4 @@
-/* Simulateur NAT + règle de sécurité — PAN Lab Helper (EDU-210 / PAN-OS 11.0)
+/* Assistant NAT + règle de sécurité — PAN-OS
    Vanilla JS, aucune dépendance, fonctionne en file:// (dépend de window.PAN de common.js). */
 (function () {
   "use strict";
@@ -9,7 +9,7 @@
   const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}$/;
   const APP_RE = /^[a-z0-9][a-z0-9_.\-]{0,62}$/i;
   const CPORT = 51515;   // port source éphémère du client (exemple)
-  const XPORT = 25661;   // port source attribué par le DIPP (exemple des slides M07)
+  const XPORT = 25661;   // port source attribué par le DIPP (valeur d'exemple)
   const ZCOL = { inside: "#22C55E", outside: "#EF4444", dmz: "#F59E0B", users: "#38BDF8", extranet: "#A78BFA" };
 
   /* ================= SCÉNARIOS ================= */
@@ -21,23 +21,24 @@
     uturn: '<svg viewBox="0 0 40 40" fill="none" stroke="#FF8A3D" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="24" width="11" height="8" rx="2"/><path d="M9 22V12a6 6 0 0 1 12 0v6"/><path d="m17 15 4 4 4-4"/><rect x="25" y="24" width="12" height="8" rx="2"/></svg>',
   };
   const SC = {
-    snat: { t: "Source NAT sortant (DIPP)", k: "Source NAT · Dynamic IP And Port", d: "LAN → Internet : les clients privés sortent avec l'IP de l'interface egress, le port source est traduit (PAT).", mini: "192.168.1.20 → <b>203.0.113.20</b>:PAT" },
-    dnat: { t: "Destination NAT entrant", k: "Destination NAT · Static IP (+ port)", d: "Publier un serveur : IP publique:port → IP privée:port, avec traduction de port optionnelle.", mini: "→ 192.168.1.80 ⇒ <b>192.168.50.80</b>" },
-    static: { t: "Static NAT 1:1 bidirectionnel", k: "Source NAT · Static IP · Bi-directional", d: "Une IP privée ↔ une IP publique fixe, dans les deux sens (sortant et entrant).", mini: "192.168.50.80 ⇄ <b>203.0.113.50</b>" },
-    uturn: { t: "U-Turn NAT", k: "Destination NAT + Source NAT (U-Turn)", d: "Un utilisateur interne joint le serveur interne via son IP publique : le paquet « fait demi-tour » dans le pare-feu.", mini: "LAN → <b>IP publique</b> → DMZ" },
+    snat: { t: "Source NAT sortant (DIPP)", k: "Source NAT · Dynamic IP And Port", d: "LAN → Internet : les clients privés sortent avec l'IP de l'interface egress, le port source est traduit (PAT).", mini: "192.168.1.50 → <b>203.0.113.10</b>:PAT" },
+    dnat: { t: "Destination NAT entrant", k: "Destination NAT · Static IP (+ port)", d: "Publier un serveur : IP publique:port → IP privée:port, avec traduction de port optionnelle.", mini: "203.0.113.20 ⇒ <b>172.16.1.10</b>" },
+    static: { t: "Static NAT 1:1 bidirectionnel", k: "Source NAT · Static IP · Bi-directional", d: "Une IP privée ↔ une IP publique fixe, dans les deux sens (sortant et entrant).", mini: "172.16.1.10 ⇄ <b>203.0.113.20</b>" },
+    uturn: { t: "U-Turn NAT", k: "Destination NAT + Source NAT (U-Turn)", d: "Un utilisateur interne joint le serveur interne via son IP publique : le paquet « fait demi-tour » dans le pare-feu.", mini: "Trust → <b>IP publique</b> → DMZ" },
     dip: { t: "Source NAT Dynamic IP (pool)", k: "Source NAT · Dynamic IP / DIPP sur pool", d: "Les clients sortent avec une IP prise dans un pool d'adresses publiques (et non l'IP d'interface).", mini: "192.168.1.0/24 → <b>pool</b> 203.0.113.30-35" },
   };
   const ORDER = ["snat", "dnat", "static", "uturn", "dip"];
+  const BADGE = { snat: "Sortant", dnat: "Entrant", static: "1:1", uturn: "Hairpin", dip: "Pool" };
 
-  const TOPO_DEF = { "t1-zone": "Internet", "t1-ip": "203.0.113.20/24", "t2-zone": "Users_Net", "t2-ip": "192.168.1.1/24", "t3-zone": "Extranet", "t3-ip": "192.168.50.1/24", "t-gw": "203.0.113.1" };
-  const BASE = { src: "any", client: "192.168.1.20", srczone2: "", dst: "8.8.8.8", dstany: true, pool: "", diptype: "dynamic-ip", client2: "", pub: "", srv: "", uturnsnat: true, bidir: true, proto: "tcp", port: "80", tport: "", natsvc: "any", secsvc: "application-default", app: "any", natname: "", secname: "", secname2: "", useobj: false, objpfx: "WebSrv" };
+  const TOPO_DEF = { "t1-zone": "Untrust", "t1-ip": "203.0.113.10/24", "t2-zone": "Trust", "t2-ip": "192.168.1.1/24", "t3-zone": "DMZ", "t3-ip": "172.16.1.1/24", "t-gw": "203.0.113.1" };
+  const BASE = { src: "any", client: "192.168.1.50", srczone2: "", dst: "8.8.8.8", dstany: true, pool: "", diptype: "dynamic-ip", client2: "", pub: "", srv: "", uturnsnat: true, bidir: true, proto: "tcp", port: "80", tport: "", natsvc: "any", secsvc: "application-default", app: "any", natname: "", secname: "", secname2: "", useobj: false, objpfx: "Web" };
   const EX = {
-    snat: { src: "any", srczone2: "Extranet", port: "443", natname: "Inside_Nets_to_Internet", secname: "Users_to_Internet", objpfx: "Users" },
-    dip: { src: "192.168.1.0/24", pool: "203.0.113.30-203.0.113.35", port: "443", natname: "Users_Dynamic_Pool", secname: "Users_to_Internet", useobj: true, objpfx: "Users" },
-    dnat: { pub: "192.168.1.80", srv: "192.168.50.80", natname: "Dest_NAT_To_Webserver", secname: "Users_to_Extranet" },
-    dnatAlt: { client: "198.51.100.10", pub: "203.0.113.80", srv: "192.168.50.80", tport: "8080", natsvc: "obj", secsvc: "obj", app: "web-browsing", natname: "Publish_WebSrv_HTTP", secname: "Internet_to_WebSrv", useobj: true },
-    static: { client2: "198.51.100.10", pub: "203.0.113.50", srv: "192.168.50.80", port: "443", app: "ssl", natname: "Static_NAT_WebSrv", secname: "WebSrv_to_Internet", secname2: "Internet_to_WebSrv", useobj: true },
-    uturn: { src: "192.168.1.0/24", pub: "203.0.113.80", srv: "192.168.50.80", natsvc: "obj", natname: "UTurn_NAT_WebSrv", secname: "Users_to_WebSrv_Public", useobj: true },
+    snat: { src: "192.168.1.0/24", port: "443", natname: "SNAT-LAN-Internet", secname: "LAN-to-Internet", useobj: true, objpfx: "LAN" },
+    dip: { src: "192.168.1.0/24", pool: "203.0.113.30-203.0.113.35", port: "443", natname: "SNAT-LAN-Pool", secname: "LAN-to-Internet", useobj: true, objpfx: "LAN" },
+    dnat: { client: "198.51.100.10", pub: "203.0.113.20", srv: "172.16.1.10", natsvc: "obj", app: "web-browsing", natname: "DNAT-Web-DMZ", secname: "Allow-Web-DMZ", useobj: true },
+    dnatAlt: { client: "198.51.100.10", pub: "203.0.113.20", srv: "172.16.1.10", port: "443", tport: "8443", natsvc: "obj", secsvc: "obj", app: "ssl", natname: "DNAT-Web-DMZ-8443", secname: "Allow-Web-DMZ", useobj: true },
+    static: { client2: "198.51.100.10", pub: "203.0.113.20", srv: "172.16.1.10", port: "443", app: "ssl", natname: "NAT-Static-Web-DMZ", secname: "Web-DMZ-to-Internet", secname2: "Allow-Web-DMZ", useobj: true },
+    uturn: { src: "192.168.1.0/24", pub: "203.0.113.20", srv: "172.16.1.10", natsvc: "obj", natname: "UTurn-Web-DMZ", secname: "LAN-to-Web-DMZ-Public", useobj: true },
   };
 
   let scen = null, model = null;
@@ -66,9 +67,10 @@
     if (/internet|untrust|outside|wan|extern/.test(s)) return "outside";
     if (/dmz/.test(s)) return "dmz";
     if (/extranet|server|srv/.test(s)) return "extranet";
-    if (/user|lan|trust|inside|client/.test(s)) return "users";
+    if (/trust|inside|lan|corp/.test(s)) return "inside";
+    if (/user|client|guest/.test(s)) return "users";
     const i = topo().findIndex(t => t.zone === z);
-    return ["outside", "users", "extranet"][i] || "inside";
+    return ["outside", "inside", "dmz"][i] || "users";
   }
   const zchip = z => `<span class="zone ${zcls(z)}">${esc(z)}</span>`;
 
@@ -78,7 +80,7 @@
       <button type="button" class="card ns-card" data-scen="${k}" aria-pressed="false" style="--d:${i * 90}ms">
         <span class="ns-check" aria-hidden="true">✓</span>
         <span class="ns-ico" aria-hidden="true">${ICON[k]}</span>
-        <span class="badge ${k === "dip" ? "" : "or"}">${k === "dip" ? "Bonus" : "Lab 7"}</span>
+        <span class="badge or">${BADGE[k]}</span>
         <span class="ns-h">${SC[k].t}</span>
         <span class="ns-p">${SC[k].d}</span>
         <span class="ns-mini">${SC[k].mini}</span>
@@ -97,7 +99,6 @@
     $$("[data-for]").forEach(el => { el.hidden = !el.dataset.for.split(" ").includes(k); });
     $("#ns-leg-srv").textContent = k === "static" ? "① Le serveur et son IP publique fixe" : "② Le serveur publié";
     $("#ns-load-alt").hidden = k !== "dnat";
-    $("#ns-load-lab").textContent = (k === "snat" || k === "dnat") ? "⟲ Charger l'exemple du Lab 7" : "⟲ Charger l'exemple (topologie Lab 7)";
     if (changed) loadExample(k, true);
     setTimeout(() => go(2), REDUCE ? 0 : 260);
   }
@@ -146,7 +147,7 @@
     AUTO.forEach(id => { const s = document.getElementById(id); delete s.dataset.manual; badge(id, false); });
     writeForm(Object.assign({}, BASE, EX[k] || {}));
     autodetect(); validate(false);
-    if (!silent) PAN.toast(k === "dnatAlt" ? "Variante Internet → serveur chargée" : "Exemple chargé ✓");
+    if (!silent) PAN.toast("Exemple chargé ✓");
   }
   const badge = (id, man) => { const b = $(`[data-auto="${id}"]`); if (b) { b.textContent = man ? "manuel" : "auto"; b.classList.toggle("man", man); } };
 
@@ -236,8 +237,8 @@
       if (!objs.some(o => o.name === name)) objs.push({ name, type: value.includes("-") ? "ip-range" : "ip-netmask", value });
       return name;
     };
-    const SP = (k === "snat" || k === "dip") ? P : "Clients";
-    const srcName = v => v === "any" ? "any" : addr(v, maskOf(v) < 32 ? `${SP}-Net` : `${SP}-Host`);
+    const SP = (k === "snat" || k === "dip") ? P : "LAN";
+    const srcName = v => v === "any" ? "any" : addr(v, maskOf(v) < 32 ? `Net-${SP}` : `Host-${SP}`);
     const svcObj = () => { const n = `${d.proto}-${d.port}`; if (!svcs.some(s => s.name === n)) svcs.push({ name: n, proto: d.proto, port: d.port }); return n; };
     const natSvc = d.natsvc === "obj" ? svcObj() : "any";
     const secSvc = d.secsvc === "obj" ? svcObj() : d.secsvc;
@@ -248,13 +249,13 @@
     if (k === "snat" || k === "dip") {
       const from = [d.srczone].concat(d.srczone2 && d.srczone2 !== d.srczone ? [d.srczone2] : []);
       const src = srcName(d.src);
-      const dstMatch = d.dstany ? "any" : addr(d.dst, `${P}-Dest`);
+      const dstMatch = d.dstany ? "any" : addr(d.dst, `Dst-${P}`);
       let st, afterS, afterSp;
       if (k === "snat") {
         st = { type: "dynamic-ip-and-port", addrType: "interface-address", iface: d.egress, ip: ifIp(d.egress) };
         afterS = hostOf(ifIp(d.egress)); afterSp = XPORT;
       } else {
-        const pool = addr(d.pool, `${P}-NAT-Pool`);
+        const pool = addr(d.pool, `Pool-${P}`);
         st = { type: d.diptype, addrType: "translated-address", translated: [pool], poolRaw: d.pool };
         afterS = d.pool.includes("-") ? d.pool.split("-")[0].trim() : hostOf(d.pool);
         afterSp = d.diptype === "dynamic-ip" ? CPORT : XPORT;
@@ -264,11 +265,11 @@
       M.flows.push({ label: "Flux sortant", srcLbl: "Client", dstLbl: "Internet", dstKind: "globe", ingress: d.ingress, egress: d.egress, zl: d.srczone, zr: d.dstzone,
         before: { s: d.client, sp: CPORT, d: d.dst, dp: d.port }, after: { s: afterS, sp: afterSp, d: d.dst, dp: d.port } });
       M.test = { from: d.srczone, to: d.dstzone, toIf: d.egress, src: d.client, dst: d.dst, port: d.port, proto: protoNum, secTo: d.dstzone };
-      M.moveTop = k === "dip"; // doit passer avant la DIPP générale du lab
+      M.moveTop = k === "dip"; // doit passer avant une DIPP générale existante
     }
 
     if (k === "dnat" || k === "uturn") {
-      const src = srcName(d.src), pub = addr(d.pub, `${P}-Public`), srv = addr(d.srv, `${P}-Private`);
+      const src = srcName(d.src), pub = addr(d.pub, `Pub-${P}`), srv = addr(d.srv, `Srv-${P}-${d.srvzone}`);
       const egr = route(d.srv).ifc;
       const st = k === "uturn" && d.uturnsnat ? { type: "dynamic-ip-and-port", addrType: "interface-address", iface: egr, ip: ifIp(egr) } : none;
       M.nat = { name: d.natname, desc: `${k === "uturn" ? "U-Turn : " : ""}${d.pub}${d.tport ? ":" + d.port : ""} -> ${d.srv}${d.tport ? ":" + d.tport : ""}`, from: [d.srczone], to: d.pubzone, toIf: d.pubif, src: [src], dst: [pub], svc: natSvc, st, dt: { type: "static-ip", addr: srv, port: d.tport } };
@@ -281,7 +282,7 @@
     }
 
     if (k === "static") {
-      const srv = addr(d.srv, `${P}-Private`), pub = addr(d.pub, `${P}-Public`);
+      const srv = addr(d.srv, `Srv-${P}-${d.srvzone}`), pub = addr(d.pub, `Pub-${P}`);
       const ing = route(d.srv).ifc, out = route("8.8.8.8"), cz = route(d.client2);
       M.nat = { name: d.natname, desc: `Static 1:1 ${d.srv} <-> ${d.pub}`, from: [d.srvzone], to: d.pubzone, toIf: d.pubif, src: [srv], dst: ["any"], svc: natSvc, st: { type: "static-ip", addrType: "translated-address", translated: [pub], bidir: d.bidir }, dt: none };
       M.sec.push({ name: d.secname, desc: `Sortant : serveur ${d.srv} vers ${out.zone}`, from: [d.srvzone], to: out.zone, src: [srv], dst: ["any"], app: "any", svc: "application-default" });
@@ -391,7 +392,7 @@
     else if (st.type === "dynamic-ip") L.push(`${base} source-translation dynamic-ip translated-address ${mem(st.translated)}`);
     else if (st.type === "static-ip") L.push(`${base} source-translation static-ip translated-address ${st.translated[0]} bi-directional ${st.bidir ? "yes" : "no"}`);
     if (n.dt.type === "static-ip") L.push(`${base} destination-translation translated-address ${n.dt.addr}${n.dt.port ? " translated-port " + n.dt.port : ""}`);
-    if (M.moveTop) L.push(`# Placer la règle AU-DESSUS de la règle DIPP générale (ex. Inside_Nets_to_Internet)`, `move rulebase nat rules ${n.name} top`);
+    if (M.moveTop) L.push(`# Placer la règle AU-DESSUS de la règle DIPP générale existante (ex. SNAT-LAN-Internet)`, `move rulebase nat rules ${n.name} top`);
     L.push("");
     M.sec.forEach(r => {
       L.push(`# Règle de sécurité (Policies > Security) — IP pré-NAT, zone post-NAT`);
@@ -467,14 +468,14 @@
 
     const flowsTabs = M.flows.length > 1 ? `<div class="ns-flowtabs" role="group" aria-label="Choix du flux">${M.flows.map((f, i) => `<button type="button" class="btn sm" data-flow="${i}" aria-pressed="${i === (M.flows.length - 1)}">${esc(f.label)}</button>`).join("")}</div>` : "";
     const secPick = M.sec.length > 1 ? `<div class="ns-secpick" role="group" aria-label="Choix de la règle de sécurité">${M.sec.map((s, i) => `<button type="button" class="btn sm" data-sec="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join("")}</div>` : "";
-    const old = M.k === "snat" ? "" : `<tr class="old"><td>${M.moveTop ? 2 : 1}</td><td>Inside_Nets_to_Internet</td><td>Users_Net, Extranet</td><td>Internet</td><td>ethernet1/1</td><td>any</td><td>any</td><td>any</td><td>dynamic-ip-and-port ethernet1/1</td><td>none</td></tr>`;
+    const old = M.k === "snat" ? "" : `<tr class="old"><td>${M.moveTop ? 2 : 1}</td><td>SNAT-LAN-Internet <i>(existante)</i></td><td>Trust</td><td>Untrust</td><td>ethernet1/1</td><td>any</td><td>any</td><td>any</td><td>dynamic-ip-and-port ethernet1/1</td><td>none</td></tr>`;
     const stTxt = n.st.type === "none" ? "none" : n.st.type + " " + (n.st.addrType === "interface-address" ? n.st.iface : list(n.st.translated)) + (n.st.bidir ? " (bi-dir)" : "");
     const dtTxt = n.dt.type === "none" ? "none" : `${n.dt.addr}${n.dt.port ? ":" + n.dt.port : ""}`;
     const tview = M.test.inb || M.test;
 
     $("#ns-res").innerHTML = `
       <div class="ns-gold fade-up" role="note">
-        <span class="kicker">Règle d'or · slides M07 « NAT and Security Policies »</span>
+        <span class="kicker">Règle d'or NAT ↔ Sécurité</span>
         <h3 style="margin-top:6px">La règle de sécurité utilise les <span class="grad">adresses IP pré-NAT</span> et la <span class="grad">zone post-NAT</span></h3>
         <p class="mut">${goldTxt}</p>
         <div class="ns-cmpwrap"><table class="ns-cmp">
@@ -508,8 +509,8 @@
           <thead><tr><th>#</th><th>Name</th><th>Source Zone</th><th>Destination Zone</th><th>Destination Interface</th><th>Source Address</th><th>Destination Address</th><th>Service</th><th>Source Translation</th><th>Destination Translation</th></tr></thead>
           <tbody>${M.moveTop || !old ? "" : old}<tr class="new"><td>${M.moveTop || !old ? 1 : 2}</td><td><b>${esc(n.name)}</b></td><td>${esc(list(n.from))}</td><td>${esc(n.to)}</td><td>${esc(n.toIf)}</td><td>${esc(list(n.src))}</td><td>${esc(list(n.dst))}</td><td>${esc(n.svc)}</td><td>${esc(stTxt)}</td><td>${esc(dtTxt)}</td></tr>${M.moveTop ? old : ""}</tbody>
         </table></div></div>
-        ${M.moveTop ? `<div class="callout warn"><b>Ordre</b>Cette règle doit être placée au-dessus de la règle DIPP générale du Lab 7 (Inside_Nets_to_Internet), sinon c'est elle qui matcherait en premier.</div>` : ""}
-        ${M.k === "dnat" && n.to === n.from[0] ? `<div class="callout"><b>Comme dans le Lab 7</b>L'IP NAT ${esc(d.pub)} appartient au réseau de ${esc(n.toIf)} : source et destination zone sont toutes deux ${esc(n.to)} dans la règle NAT. Dans le lab, c'est la règle existante Users_to_Extranet (zone post-NAT Extranet) qui autorise le flux.</div>` : ""}
+        ${M.moveTop ? `<div class="callout warn"><b>Ordre</b>Placez cette règle au-dessus de toute règle DIPP générale (ex. SNAT-LAN-Internet), sinon c'est celle-ci qui matchera en premier.</div>` : ""}
+        ${M.k === "dnat" && n.to === n.from[0] ? `<div class="callout"><b>IP NAT dans un sous-réseau interne</b>L'IP NAT ${esc(d.pub)} appartient au réseau de ${esc(n.toIf)} : source et destination zone sont toutes deux ${esc(n.to)} dans la règle NAT. La règle de sécurité utilise pourtant la zone post-NAT ${esc(M.sec[0].to)}.</div>` : ""}
       </div>
 
       <div class="ns-block">
@@ -594,7 +595,7 @@
       <circle id="ns-fwglow" cx="${XF}" cy="${Y}" r="70" fill="#FA582D" opacity="0" filter="url(#ns-glow)"/>
       <rect x="${XF - 72}" y="${Y - 60}" width="144" height="120" rx="22" fill="#0B1224" stroke="#FA582D" stroke-width="3"/>
       <g transform="translate(${XF - 20} ${Y - 44})" fill="none" stroke="#FF8A3D" stroke-width="3.2" stroke-linecap="round"><path d="M20 2 4 9v10c0 9 7 16 16 18 9-2 16-9 16-18V9z"/><path d="m13 19 5 5 9-9"/></g>
-      <text x="${XF}" y="${Y + 18}" text-anchor="middle" fill="#F1F5F9" font-size="15" font-weight="800">Firewall-A</text>
+      <text x="${XF}" y="${Y + 18}" text-anchor="middle" fill="#F1F5F9" font-size="15" font-weight="800">PA-FW</text>
       <text x="${XF}" y="${Y + 40}" text-anchor="middle" fill="#94A3B8" font-size="12.5" id="ns-fwtxt">NAT · Security</text>
       <text x="${XF - 80}" y="${Y + 28}" text-anchor="end" fill="${cl}" font-size="13" font-weight="700">${esc(f.ingress)}</text>
       <text x="${XF + 80}" y="${Y + 28}" fill="${cr}" font-size="13" font-weight="700">${esc(f.egress)}</text>
@@ -669,7 +670,7 @@
   /* ================= EXPORT .TXT ================= */
   function exportTxt(M) {
     const n = M.nat, line = "=".repeat(64), L = [];
-    L.push(line, `PAN Lab Helper — Simulateur NAT (EDU-210 / PAN-OS 11.0)`, `Scénario : ${SC[M.k].t}`, `Généré le : ${new Date().toLocaleString("fr-FR")}`, line, "");
+    L.push(line, `Assistant NAT PAN-OS — configuration générée`, `Scénario : ${SC[M.k].t}`, `Généré le : ${new Date().toLocaleString("fr-FR")}`, line, "");
     L.push("RÈGLE D'OR : la règle de sécurité utilise les IP PRÉ-NAT et la ZONE POST-NAT.", "");
     M.flows.forEach(f => L.push(`[${f.label}]`, `  Avant NAT (ingress ${f.ingress}, zone ${f.zl}) : ${f.before.s}:${f.before.sp} -> ${f.before.d}:${f.before.dp}`, `  Après NAT (egress ${f.egress}, zone ${f.zr})  : ${f.after.s}:${f.after.sp} -> ${f.after.d}:${f.after.dp}`, ""));
     L.push("--- Policies > NAT > Add ---");
@@ -710,14 +711,15 @@
 
   /* ================= TIMELINE « LOGIQUE » ================= */
   const TL = [
-    { i: "⇥", t: "Ingress", d: "Le paquet arrive sur une interface (ex. ethernet1/2). Contrôles d'en-tête. L'interface détermine la <b>zone source</b>.", tip: "Zone source = zone de l'interface d'entrée." },
-    { i: "⌕", t: "Session lookup", d: "Le paquet appartient-il à une session existante ? <b>Oui</b> → fast path : la traduction déjà calculée est appliquée, pas de nouvelle évaluation de règles. <b>Non</b> → session setup (slow path).", tip: "C'est pourquoi les réponses n'ont pas besoin de règle NAT inverse." },
-    { i: "⛨", t: "Zone / DoS", d: "Zone Protection et DoS Protection sont appliqués sur la zone source avant toute création de session.", tip: "Premier filtre défensif du slow path." },
-    { i: "⇄", t: "Forwarding lookup", d: "PBF puis route lookup sur l'IP de destination <b>d'origine</b> → zone de destination <b>pré-NAT</b> (celle utilisée dans Original Packet de la règle NAT).", tip: "Pour 203.0.113.80 : route → ethernet1/1 → zone Internet." },
-    { i: "⚙", t: "NAT policy (calcul)", key: true, d: "La rulebase NAT est évaluée (top-down) avec les valeurs d'origine. Si un <b>DNAT</b> matche, une nouvelle route lookup sur l'IP traduite donne la zone de destination <b>post-NAT</b>. <b>Rien n'est encore réécrit.</b>", tip: "Slide flow logic : « Destination Zone (plus DNAT check) »." },
-    { i: "✔", t: "Security policy", key: true, d: "La règle de sécurité est cherchée avec les <b>IP pré-NAT</b> et la <b>zone post-NAT</b> (App-ID ignoré au premier paquet). Si autorisé → session créée, puis App-ID / Content-ID / profils.", tip: "« *Policy check relies on pre-NAT IP addresses »." },
-    { i: "⇤", t: "Egress + traduction", d: "Le paquet sort par l'interface finale : la traduction (source et/ou destination, IP et port) est <b>appliquée maintenant</b>. Les paquets retour suivent la session (s2c) et sont dé-traduits.", tip: "C'est ici que 192.168.1.20 devient 203.0.113.20." },
+    { i: "⇥", t: "Ingress", d: "Interface d'entrée → <b>zone source</b>." },
+    { i: "⌕", t: "Session lookup", d: "Session existante → fast path, traduction déjà connue (le retour n'a besoin d'aucune règle). Sinon : slow path." },
+    { i: "⛨", t: "Zone / DoS", d: "Zone Protection et DoS Protection sur la zone source." },
+    { i: "⇄", t: "Forwarding lookup", d: "PBF / route sur l'IP de destination <b>d'origine</b> → zone de destination <b>pré-NAT</b> (Original Packet)." },
+    { i: "⚙", t: "NAT policy (calcul)", key: true, d: "Rulebase NAT évaluée top-down avec les valeurs d'origine. En DNAT, route lookup sur l'IP traduite → zone <b>post-NAT</b>. Rien n'est encore réécrit." },
+    { i: "✔", t: "Security policy", key: true, d: "Match sur <b>IP pré-NAT</b> + <b>zone post-NAT</b>. Si allow → création de session, puis App-ID / Content-ID." },
+    { i: "⇤", t: "Egress + traduction", d: "Réécriture IP/ports <b>appliquée à la sortie</b>. Le retour (s2c) est dé-traduit via la session." },
   ];
+
   let tlTimer = null, tlCur = 0;
   function renderTL() {
     const box = $("#ns-tl");
@@ -729,10 +731,10 @@
     });
     showTL(0);
     $("#ns-tl-play").addEventListener("click", () => (tlTimer ? stopTL() : playTL()));
-    if ("IntersectionObserver" in window && !REDUCE) {
-      const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { playTL(); io.disconnect(); } }, { threshold: .4 });
-      io.observe(box);
-    }
+    let played = false;
+    $("#ns-logic").addEventListener("toggle", e => {
+      if (e.target.open) { showTL(tlCur); if (!played && !REDUCE) { played = true; playTL(); } } else stopTL();
+    });
   }
   function showTL(i) {
     tlCur = i;
@@ -742,7 +744,7 @@
     else { bar.style.height = ""; bar.style.width = pct + "%"; }
     const s = TL[i], det = $("#ns-tldet");
     det.setAttribute("aria-labelledby", "ns-tl-" + i);
-    det.innerHTML = `<h3><span class="ns-num">${i + 1}</span>${s.t}${s.key ? ' <span class="badge or">clé pour la NAT</span>' : ""}</h3><p class="fade-up">${s.d}</p><div class="callout ${s.key ? "or" : ""}" style="margin-bottom:0"><b>À retenir</b>${s.tip}</div>`;
+    det.innerHTML = `<h3><span class="ns-num">${i + 1}</span>${s.t}${s.key ? ' <span class="badge or">clé NAT</span>' : ""}</h3><p class="fade-up">${s.d}</p>`;
   }
   function playTL() {
     stopTL(); $("#ns-tl-play").textContent = "⏸ Pause";
@@ -777,7 +779,7 @@
     });
     $("#ns-load-lab").addEventListener("click", () => loadExample(scen));
     $("#ns-load-alt").addEventListener("click", () => {
-      loadExample("dnat", true); writeForm(EX.dnatAlt); autodetect(); validate(false); PAN.toast("Variante Internet → serveur chargée");
+      loadExample("dnat", true); writeForm(EX.dnatAlt); autodetect(); validate(false); PAN.toast("Variante port translation chargée");
     });
     $$("[data-go]").forEach(b => b.addEventListener("click", () => go(+b.dataset.go)));
     $("#ns-export").addEventListener("click", () => model && exportTxt(model));
