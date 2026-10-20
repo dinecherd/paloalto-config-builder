@@ -1,0 +1,287 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Simulateur de règle de sécurité · PAN Lab Helper</title>
+<meta name="description" content="Construisez une règle de sécurité PAN-OS 11.0 pas à pas, obtenez un score bonnes pratiques, détectez le shadowing et testez un flux (évaluation top-down).">
+<link rel="stylesheet" href="../assets/css/style.css"><link rel="stylesheet" href="css/sec-sim.css"></head>
+<body data-root="../" data-page="sec-sim"><div id="site-nav"></div>
+<main id="main">
+
+<!-- ============ 1. HERO ============ -->
+<section class="ss-hero"><div class="wrap">
+  <div data-reveal>
+    <span class="kicker">Module 6 · Lab 6 · Policies &gt; Security</span>
+    <h1>Créer une règle de sécurité <span class="grad">de la bonne manière</span></h1>
+    <p class="lead">Remplissez la règle, regardez la WebUI PAN-OS se compléter en direct, visez 100/100 au score bonnes pratiques, insérez-la dans la rulebase, puis envoyez un paquet : il descend les règles de haut en bas et s'arrête à la <b>première</b> qui correspond.</p>
+    <div class="row">
+      <a class="btn primary" href="#builder">Construire ma règle</a>
+      <a class="btn ghost" href="#tester">Tester un flux</a>
+      <span class="badge or">PAN-OS 11.0</span><span class="badge">Top-down · first match</span>
+    </div>
+  </div>
+  <div class="hero-viz" data-reveal="zoom" aria-hidden="true">
+    <span class="hv-packet"></span>
+    <div class="hv-rule">1 Block-to-Known-Bad-Addresses<b class="deny">deny</b></div>
+    <div class="hv-rule">2 Block-from-Known-Bad-Addresses<b class="deny">deny</b></div>
+    <div class="hv-rule">3 Users_to_Extranet<b class="allow">allow</b></div>
+    <div class="hv-rule hit">4 Users_to_Internet<b class="allow">allow</b></div>
+    <div class="hv-rule def">intrazone-default<b class="allow">allow</b></div>
+    <div class="hv-rule def">interzone-default<b class="deny">deny</b></div>
+    <p class="hv-note">ping 8.8.8.8 depuis Client-A → match règle 4, évaluation stoppée</p>
+  </div>
+</div></section>
+
+<!-- ============ 2-3. CONSTRUCTEUR + SCORE ============ -->
+<section id="builder" style="padding-top:30px"><div class="wrap">
+  <div class="sec-head" data-reveal>
+    <span class="kicker">Étape 1 · Constructeur</span>
+    <h2>Policies &gt; Security &gt; <span class="grad">Add</span></h2>
+    <p class="lead">Chargez un exemple du Lab 6 ou partez de zéro. Chaque champ correspond à un onglet de la fenêtre <i>Security Policy Rule</i> de la WebUI (termes en anglais, comme sur le pare-feu).</p>
+  </div>
+
+  <div class="presets" id="presets" role="group" aria-label="Exemples du lab à charger"></div>
+
+  <div class="builder">
+    <form id="ruleForm" novalidate autocomplete="off" aria-label="Constructeur de règle de sécurité">
+      <fieldset class="fs" data-tab="general"><legend>General <small>identité de la règle</small></legend>
+        <div class="field"><label for="f-name">Name <span class="mut small">(nom explicite, unique, 63 car. max)</span></label>
+          <input type="text" id="f-name" maxlength="63" placeholder="ex. Users_to_Internet" aria-describedby="name-err"><div class="err-inline" id="name-err" aria-live="polite"></div></div>
+        <div class="field"><label for="f-desc">Description <span class="mut small">(optionnelle mais fortement recommandée)</span></label>
+          <textarea id="f-desc" rows="2" maxlength="1024" placeholder="Que fait la règle, pour qui, pourquoi ?"></textarea></div>
+        <div class="field"><span class="lbl" id="l-tags">Tags <span class="mut small">(Objects &gt; Tags)</span></span><div class="chips" id="c-tags" role="group" aria-labelledby="l-tags"></div></div>
+        <div class="field"><span class="lbl" id="l-type">Rule Type</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-type" id="r-type"></div>
+          <div class="hint" id="type-hint"></div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="source"><legend>Source <small>zone + adresse d'origine (pré-NAT)</small></legend>
+        <div class="field"><span class="lbl" id="l-from">Source Zone</span><div class="chips" id="c-from" role="group" aria-labelledby="l-from"></div></div>
+        <div class="field"><span class="lbl" id="l-src">Source Address</span><div class="chips" id="c-src" role="group" aria-labelledby="l-src"></div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="user"><legend>User <small>User-ID</small></legend>
+        <div class="field"><span class="lbl" id="l-user">Source User</span><div class="chips" id="c-user" role="group" aria-labelledby="l-user"></div>
+          <div class="hint">Groupes fictifs (User-ID / mappage de groupes). <b>known-user</b> = tout utilisateur identifié, <b>unknown</b> = IP non mappée.</div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="destination"><legend>Destination <small>zone post-NAT, adresse pré-NAT</small></legend>
+        <div class="field"><span class="lbl" id="l-to">Destination Zone</span><div class="chips" id="c-to" role="group" aria-labelledby="l-to"></div></div>
+        <div class="field"><span class="lbl" id="l-dst">Destination Address</span><div class="chips" id="c-dst" role="group" aria-labelledby="l-dst"></div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="application"><legend>Application <small>App-ID</small></legend>
+        <div class="field"><span class="lbl" id="l-app">Applications</span><div class="chips" id="c-app" role="group" aria-labelledby="l-app"></div>
+          <div class="hint" id="app-hint"></div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="service"><legend>Service/URL Category</legend>
+        <div class="field"><span class="lbl" id="l-svc">Service</span><div class="chips" id="c-svc" role="group" aria-labelledby="l-svc"></div>
+          <div class="hint" id="svc-hint"></div></div>
+        <div class="field"><span class="lbl" id="l-url">URL Category</span><div class="chips" id="c-url" role="group" aria-labelledby="l-url"></div></div>
+      </fieldset>
+
+      <fieldset class="fs" data-tab="actions"><legend>Actions <small>action, profils, logs</small></legend>
+        <div class="field"><span class="lbl" id="l-act">Action Setting · Action</span><div class="seg" role="radiogroup" aria-labelledby="l-act" id="r-act"></div>
+          <div class="hint" id="act-hint"></div></div>
+        <div class="field"><span class="lbl" id="l-ptype">Profile Setting · Profile Type</span><div class="seg" role="radiogroup" aria-labelledby="l-ptype" id="r-ptype"></div></div>
+        <div class="field" id="w-group"><label for="f-group">Group Profile</label><select id="f-group"></select></div>
+        <div id="w-prof" class="f2">
+          <div class="field"><label for="p-av">Antivirus</label><select id="p-av"></select></div>
+          <div class="field"><label for="p-as">Anti-Spyware</label><select id="p-as"></select></div>
+          <div class="field"><label for="p-vuln">Vulnerability Protection</label><select id="p-vuln"></select></div>
+          <div class="field"><label for="p-url">URL Filtering</label><select id="p-url"></select></div>
+          <div class="field"><label for="p-fb">File Blocking</label><select id="p-fb"></select></div>
+          <div class="field"><label for="p-wf">WildFire Analysis</label><select id="p-wf"></select></div>
+        </div>
+        <div class="field"><span class="lbl">Log Setting</span>
+          <label class="chk"><input type="checkbox" id="f-logstart"> Log at Session Start <span class="mut small">(dépannage uniquement)</span></label>
+          <label class="chk"><input type="checkbox" id="f-logend"> Log at Session End <span class="mut small">(défaut sur une règle créée)</span></label>
+        </div>
+        <div class="field"><label for="f-logfwd">Log Forwarding</label><select id="f-logfwd"></select></div>
+      </fieldset>
+
+      <div class="row">
+        <button type="button" class="btn primary" id="btn-add">➕ Ajouter ma règle à la rulebase</button>
+        <button type="button" class="btn ghost sm" id="btn-reset">Réinitialiser</button>
+      </div>
+    </form>
+
+    <aside class="side" aria-label="Aperçu WebUI et score">
+      <div class="pan" id="mock">
+        <div class="pan-top" aria-hidden="true"><span>Dashboard</span><span>ACC</span><span>Monitor</span><span class="on">Policies</span><span>Objects</span><span>Network</span><span>Device</span></div>
+        <div class="pan-title"><span>Security Policy Rule <small id="mock-sub">— nouvelle règle</small></span><span class="small" style="color:#7B8794">?</span></div>
+        <div class="pan-tabs" role="tablist" aria-label="Onglets de la règle (aperçu)" id="mock-tabs"></div>
+        <div class="pan-body" id="mock-body" role="tabpanel" aria-live="polite"></div>
+        <div class="pan-foot"><button type="button" class="pan-btn pri" id="mock-ok">OK</button><button type="button" class="pan-btn" id="mock-cancel">Cancel</button></div>
+      </div>
+
+      <div class="card" id="score">
+        <div class="score-card">
+          <div class="gauge" id="gauge" role="img" aria-label="Score bonnes pratiques">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FA582D"/><stop offset="1" stop-color="#FF8A3D"/></linearGradient></defs>
+              <circle class="trk" cx="60" cy="60" r="52" fill="none" stroke-width="10"/>
+              <circle class="val" id="g-arc" cx="60" cy="60" r="52" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73" stroke="url(#gg)"/>
+            </svg>
+            <div class="num"><div><b id="g-num">0</b><small>/ 100</small></div></div>
+          </div>
+          <div>
+            <span class="kicker">Score bonnes pratiques</span>
+            <div class="grade" id="g-grade">—</div>
+            <p class="small mut" id="g-sum">Basé sur EDU-210 M06 et le guide d'administration PAN-OS 11.0.</p>
+          </div>
+        </div>
+        <ul class="recos" id="recos" aria-live="polite"></ul>
+      </div>
+    </aside>
+  </div>
+</div></section>
+
+<!-- ============ 4. RULEBASE ============ -->
+<section id="rulebase"><div class="wrap">
+  <div class="sec-head" data-reveal>
+    <span class="kicker">Étape 2 · Rulebase</span>
+    <h2>L'ordre des règles <span class="grad">change tout</span></h2>
+    <p class="lead">Les règles sont évaluées de haut en bas ; dès qu'une règle correspond, les suivantes ne sont plus évaluées. <b>intrazone-default</b> (allow) et <b>interzone-default</b> (deny) restent toujours en bas et, par défaut, <b>ne journalisent pas</b>.</p>
+  </div>
+
+  <div class="rb-alert" id="rb-alert" aria-live="assertive"></div>
+
+  <div class="pan">
+    <div class="pan-top" aria-hidden="true"><span>Dashboard</span><span>ACC</span><span>Monitor</span><span class="on">Policies</span><span>Objects</span><span>Network</span><span>Device</span></div>
+    <div class="pan-title"><span>Security <small>· Policy Optimizer : <span id="po-sum">—</span></small></span><button type="button" class="pan-commit" id="btn-commit">Commit</button></div>
+    <div class="rb-scroll" tabindex="0" aria-label="Table des règles de sécurité (défilement horizontal)">
+      <table class="rb" id="rb-table" aria-label="Rulebase de sécurité">
+        <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Tags</th><th scope="col">Type</th><th scope="col">Source Zone</th><th scope="col">Source Address</th><th scope="col">Source User</th><th scope="col">Destination Zone</th><th scope="col">Destination Address</th><th scope="col">Application</th><th scope="col">Service</th><th scope="col">URL Category</th><th scope="col">Action</th><th scope="col">Profile</th><th scope="col">Options</th><th scope="col">Hit Count</th></tr></thead>
+        <tbody id="rb-body"></tbody>
+      </table>
+    </div>
+    <div class="pan-foot rb-tools" role="toolbar" aria-label="Actions sur la règle sélectionnée">
+      <button type="button" class="pan-btn pri" id="t-add">Add (ma règle)</button>
+      <button type="button" class="pan-btn" id="t-edit">Edit</button>
+      <button type="button" class="pan-btn" id="t-del">Delete</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="pan-btn" id="t-top" title="Move Top">⤒ Move Top</button>
+      <button type="button" class="pan-btn" id="t-up" title="Move Up">↑ Up</button>
+      <button type="button" class="pan-btn" id="t-down" title="Move Down">↓ Down</button>
+      <button type="button" class="pan-btn" id="t-bottom" title="Move Bottom">⤓ Move Bottom</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="pan-btn" id="t-toggle">Disable</button>
+      <button type="button" class="pan-btn" id="t-override">Override</button>
+      <button type="button" class="pan-btn" id="t-reset">Reset Rule Hit Counter</button>
+      <button type="button" class="pan-btn" id="t-restore">Rulebase du lab</button>
+    </div>
+  </div>
+  <p class="small mut" style="margin-top:8px" id="rb-sel" aria-live="polite">Cliquez sur une ligne pour la sélectionner (clavier : Tab puis Entrée).</p>
+
+  <div class="commit-box pan" id="commit-box" aria-live="polite">
+    <div class="pan-title"><span>Commit Status</span><button type="button" class="pan-btn" id="commit-close">Close</button></div>
+    <div class="pan-body" id="commit-body" style="min-height:0"></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:22px">
+    <div class="callout or" data-reveal><b>Shadowing (règle masquée)</b>Une règle placée plus haut, plus générale, « fait de l'ombre » à une règle plus bas : celle-ci ne sera jamais atteinte. Le commit le signale dans l'onglet <i>Rule Shadow</i> de la fenêtre Commit Status. Corrigez en réordonnant ou en affinant.</div>
+    <div class="callout" data-reveal data-delay="100"><b>Ajout d'une règle</b>Comme dans la WebUI : si une règle est sélectionnée, <i>Add</i> insère la nouvelle règle juste en dessous ; sinon au-dessus des règles par défaut. Les numéros de ligne ne suivent pas la règle quand on la déplace.</div>
+    <div class="callout warn" data-reveal data-delay="200"><b>Règles par défaut</b>On ne peut ni les déplacer ni les supprimer, seulement les <i>Override</i> (ex. Lab 6 : cocher <i>Log at Session End</i> sur interzone-default pour voir les flux refusés dans le Traffic log).</div>
+  </div>
+</div></section>
+
+<!-- ============ 5. TESTER UN FLUX ============ -->
+<section id="tester"><div class="wrap">
+  <div class="sec-head" data-reveal>
+    <span class="kicker">Étape 3 · Test Policy Match</span>
+    <h2>Envoyez un paquet <span class="grad">dans la rulebase</span></h2>
+    <p class="lead">Équivalent de <i>Policies &gt; Security &gt; Test Policy Match</i> ou de la commande CLI <code>test security-policy-match</code>. Saisissez les IP <b>pré-NAT</b> et la zone de destination <b>post-NAT</b>.</p>
+  </div>
+  <div class="tester">
+    <form class="card" id="flowForm" novalidate autocomplete="off" aria-label="Paramètres du flux à tester">
+      <span class="lbl">Flux types du lab</span>
+      <div class="flow-presets" id="flow-presets"></div>
+      <div class="f3">
+        <div class="field"><label for="t-src">Source IP</label><input type="text" id="t-src" inputmode="decimal"><div class="err-inline" id="t-src-err" aria-live="polite"></div></div>
+        <div class="field"><label for="t-from">Source Zone</label><select id="t-from"></select></div>
+        <div class="field"><label for="t-dst">Destination IP</label><input type="text" id="t-dst" inputmode="decimal"><div class="err-inline" id="t-dst-err" aria-live="polite"></div></div>
+        <div class="field"><label for="t-to">Destination Zone</label><select id="t-to"></select></div>
+        <div class="field"><label for="t-app">Application (App-ID)</label><select id="t-app"></select></div>
+        <div class="field"><label for="t-proto">Protocol</label><select id="t-proto"><option value="6">TCP (6)</option><option value="17">UDP (17)</option><option value="1">ICMP (1)</option></select></div>
+        <div class="field"><label for="t-port">Destination Port</label><input type="number" id="t-port" min="1" max="65535"><div class="err-inline" id="t-port-err" aria-live="polite"></div></div>
+        <div class="field"><label for="t-user">Source User</label><select id="t-user"></select></div>
+        <div class="field"><label for="t-url">URL Category (si web)</label><select id="t-url"></select></div>
+      </div>
+      <p class="hint" style="margin:-4px 0 12px">La zone est proposée automatiquement d'après l'IP (sous-réseaux du Lab 5 : 192.168.1.0/24 → Users_Net, 192.168.50.0/24 → Extranet, reste → Internet) ; dans la réalité elle dépend de l'interface et de la route.</p>
+      <button type="submit" class="btn primary" id="t-run">▶ Lancer le test</button>
+    </form>
+    <div>
+      <div class="lane" id="lane" aria-label="Évaluation top-down de la rulebase"><span class="pkt" id="pkt" aria-hidden="true"></span><div id="lane-rules"></div></div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="cli-wrap" style="margin-top:18px">
+    <button type="button" class="btn sm copy-btn" data-copy-target="#test-cli">Copier</button>
+    <div class="code" id="test-cli" tabindex="0" aria-label="Commande CLI de test"></div>
+  </div>
+</div></section>
+
+<!-- ============ 6. CLI ============ -->
+<section id="cli"><div class="wrap">
+  <div class="sec-head" data-reveal>
+    <span class="kicker">Étape 4 · CLI</span>
+    <h2>La même règle <span class="grad">en CLI PAN-OS</span></h2>
+    <p class="lead">Commandes générées en direct à partir du constructeur (mode configuration). Les objets nécessaires sont créés avant la règle ; la position suit celle de votre règle dans la rulebase ci-dessus.</p>
+  </div>
+  <div class="cli-wrap">
+    <button type="button" class="btn sm copy-btn" data-copy-target="#cli-out">Copier</button>
+    <div class="code" id="cli-out" tabindex="0" aria-label="Configuration CLI générée"></div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button type="button" class="btn primary" id="cli-commit">Commit (simulé)</button>
+    <span class="small mut">Astuce : en CLI, <code>show rulebase security rules &lt;nom&gt;</code> (mode configuration) affiche la règle, et <code>show running security-policy</code> la politique active.</span>
+  </div>
+</div></section>
+
+<!-- ============ 8. ORDRE DE TRAITEMENT ============ -->
+<section id="flow"><div class="wrap">
+  <div class="sec-head" data-reveal>
+    <span class="kicker">Rappel · Flow logic (M06)</span>
+    <h2>Où intervient la règle de sécurité ?</h2>
+    <p class="lead">Ordre simplifié du traitement d'un nouveau paquet (diapo « Flow Logic of the Next-Generation Firewall »).</p>
+  </div>
+  <div class="pipe">
+    <div class="pstep" style="--i:0" data-reveal><b>Session existante ?</b><p>Si le paquet appartient à une session déjà établie, il est traité directement (fast path).</p></div>
+    <div class="pstep" style="--i:1" data-reveal data-delay="60"><b>Zone source</b><p>Déterminée par l'interface d'entrée. Zone Protection / DoS Protection.</p></div>
+    <div class="pstep key" style="--i:2" data-reveal data-delay="120"><b>Forwarding lookup</b><p>PBF puis route → interface de sortie → <b>zone de destination</b>, avec vérification <b>DNAT</b> (zone post-NAT).</p></div>
+    <div class="pstep key" style="--i:3" data-reveal data-delay="180"><b>Security Policy check</b><p>Sur les adresses <b>pré-NAT</b>. À ce stade l'application n'est pas encore connue (App-ID ignoré).</p></div>
+    <div class="pstep" style="--i:4" data-reveal data-delay="240"><b>Session créée</b><p>Attribution d'un Session ID. La politique NAT a été évaluée ; elle sera appliquée à la sortie.</p></div>
+    <div class="pstep key" style="--i:5" data-reveal data-delay="300"><b>App-ID</b><p>L'application est identifiée ; la règle de sécurité est réévaluée avec l'application réelle.</p></div>
+    <div class="pstep" style="--i:6" data-reveal data-delay="360"><b>Content-ID</b><p>Les Security Profiles attachés à la règle allow inspectent le contenu (AV, Anti-Spyware, Vuln, URL, File Blocking, WildFire).</p></div>
+    <div class="pstep" style="--i:7" data-reveal data-delay="420"><b>Forward</b><p>Ré-encryption si déchiffré, NAT appliquée, paquet transmis.</p></div>
+  </div>
+
+  <div class="nat-box">
+    <div class="card" data-reveal>
+      <h3>Règle de sécurité + NAT</h3>
+      <p class="mut">Règle d'or EDU-210 (M07) : dans une règle de sécurité, les <b>adresses IP sont pré-NAT</b> (celles du paquet d'origine) et la <b>zone de destination est post-NAT</b> (celle où se trouve réellement l'hôte final).</p>
+      <a class="btn sm" style="margin-top:14px" href="simulateur-nat.html">Ouvrir le simulateur NAT →</a>
+    </div>
+    <div class="card" data-reveal data-delay="100">
+      <h3>Exemple du Lab 7 (DNAT)</h3>
+      <p class="mut small">Dest_NAT_To_Webserver : Client-A ouvre http://192.168.1.80, traduit vers le serveur 192.168.50.80 de l'Extranet.</p>
+      <dl class="kv">
+        <dt>Source Zone</dt><dd><span class="zone users">Users_Net</span></dd>
+        <dt>Destination Zone</dt><dd><span class="zone extranet">Extranet</span> (post-NAT)</dd>
+        <dt>Destination Address</dt><dd>192.168.1.80 (pré-NAT)</dd>
+        <dt>Règle qui matche</dt><dd>Users_to_Extranet</dd>
+      </dl>
+      <button type="button" class="btn sm ghost" style="margin-top:12px" id="try-dnat">Tester ce flux ↑</button>
+    </div>
+    <div class="card" data-reveal data-delay="200">
+      <h3>Exemple du Lab 7 (SNAT)</h3>
+      <p class="mut small">Inside_Nets_to_Internet : 192.168.1.20 sort en 203.0.113.20 (ethernet1/1).</p>
+      <dl class="kv">
+        <dt>Source Zone</dt><dd><span class="zone users">Users_Net</span></dd>
+        <dt>Destination Zone</dt><dd><span class="zone outside">Internet</span></dd>
+        <dt>Source Address</dt><dd>192.168.1.20 (pré-NAT, pas 203.0.113.20)</dd>
+        <dt>Règle qui matche</dt><dd>Users_to_Internet</dd>
+      </dl>
+    </div>
+  </div>
+</div></section>
+</main>
+<div id="site-foot"></div><script src="../assets/js/common.js"></script><script src="js/sec-sim.js"></script></body></html>

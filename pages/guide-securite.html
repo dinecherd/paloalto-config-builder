@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guide règle de sécurité · PAN Lab Helper</title>
+<meta name="description" content="Tutoriel pas-à-pas : créer une règle de sécurité PAN-OS 11.0 de la bonne manière (EDU-210, Module 6, Lab 6).">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="css/guides.css">
+</head>
+<body data-root="../" data-page="guide-sec">
+<div id="site-nav"></div>
+
+<!-- ================= HERO ================= -->
+<header class="g-hero">
+  <div class="wrap">
+    <div data-reveal="left">
+      <span class="kicker">Guide pas-à-pas · Module 6 · Lab 6</span>
+      <h1>Créer une règle de sécurité <span class="grad">de la bonne manière</span></h1>
+      <p class="lead">Des concepts (intrazone, interzone, top-down, application-default…) jusqu'au commit et à la vérification dans les logs : on refait ensemble la règle <b>Users_to_Internet</b> du Lab 6, onglet par onglet, comme dans la vraie WebUI PAN-OS.</p>
+      <div class="meta">
+        <span class="badge or">PAN-OS 11.0</span>
+        <span class="badge">Policies › Security</span>
+        <span class="badge ok">Lab 6 — Creating and Managing Security Policy Rules</span>
+      </div>
+      <div class="row cta">
+        <a class="btn primary" href="#tuto">Commencer le tuto ↓</a>
+        <a class="btn ghost" href="simulateur-securite.html">Ouvrir le simulateur</a>
+      </div>
+      <div class="g-stats">
+        <div><b data-count="3">3</b><span>types de règles</span></div>
+        <div><b data-count="6">6</b><span>onglets à remplir</span></div>
+        <div><b data-count="6">6</b><span>étapes du tuto</span></div>
+      </div>
+    </div>
+    <div class="g-hero-art" data-reveal="zoom" data-delay="150">
+      <div class="diagram">
+        <svg viewBox="0 0 560 360" role="img" aria-labelledby="topo-t topo-d">
+          <title id="topo-t">Topologie du Lab 6</title>
+          <desc id="topo-d">Le firewall relie trois zones : Users_Net (ethernet1/2, 192.168.1.1/24, Client-A 192.168.1.20), Internet (ethernet1/1, 203.0.113.20/24, passerelle 203.0.113.1) et Extranet (ethernet1/3, 192.168.50.1/24, serveur web 192.168.50.80).</desc>
+          <defs>
+            <linearGradient id="fwg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FA582D"/><stop offset="1" stop-color="#FF8A3D"/></linearGradient>
+          </defs>
+          <!-- zones -->
+          <rect x="10" y="100" width="180" height="170" rx="16" fill="rgba(56,189,248,.10)" stroke="#38BDF8" stroke-width="1.5"/>
+          <text x="24" y="124" class="svg-txt" font-size="14" font-weight="800" fill="#38BDF8">Users_Net</text>
+          <rect x="372" y="10" width="178" height="150" rx="16" fill="rgba(239,68,68,.10)" stroke="#EF4444" stroke-width="1.5"/>
+          <text x="386" y="34" class="svg-txt" font-size="14" font-weight="800" fill="#EF4444">Internet</text>
+          <rect x="372" y="200" width="178" height="150" rx="16" fill="rgba(167,139,250,.10)" stroke="#A78BFA" stroke-width="1.5"/>
+          <text x="386" y="224" class="svg-txt" font-size="14" font-weight="800" fill="#A78BFA">Extranet</text>
+          <!-- liens -->
+          <path d="M140 196 L236 182" stroke="#38BDF8" stroke-width="2" class="flow-line" fill="none"/>
+          <path d="M330 162 L420 92" stroke="#EF4444" stroke-width="2" class="flow-line" fill="none"/>
+          <path d="M330 202 L420 276" stroke="#A78BFA" stroke-width="2" class="flow-line" fill="none"/>
+          <!-- client -->
+          <rect x="62" y="160" width="76" height="50" rx="6" fill="#0B1224" stroke="#38BDF8"/>
+          <rect x="70" y="167" width="60" height="32" rx="3" fill="rgba(56,189,248,.25)"/>
+          <rect x="88" y="212" width="24" height="5" rx="2" fill="#38BDF8"/>
+          <text x="100" y="238" text-anchor="middle" class="svg-txt" font-size="12" font-weight="700">Client-A</text>
+          <text x="100" y="254" text-anchor="middle" class="svg-txt svg-mono" font-size="11" fill="#94A3B8">192.168.1.20</text>
+          <!-- firewall -->
+          <rect x="232" y="140" width="100" height="84" rx="14" fill="url(#fwg)" class="pulse"/>
+          <path d="M282 156 l-16 7 v11 c0 9 7 17 16 18 c9-1 16-9 16-18 v-11z" fill="none" stroke="#fff" stroke-width="2.4"/>
+          <text x="282" y="208" text-anchor="middle" class="svg-txt" font-size="12" font-weight="800" fill="#fff">Firewall · VR-1</text>
+          <text x="226" y="248" text-anchor="end" class="svg-txt svg-mono" font-size="10" fill="#7DD3FC">e1/2 · 192.168.1.1</text>
+          <text x="338" y="134" class="svg-txt svg-mono" font-size="10" fill="#FCA5A5">e1/1 · 203.0.113.20</text>
+          <text x="338" y="244" class="svg-txt svg-mono" font-size="10" fill="#C4B5FD">e1/3 · 192.168.50.1</text>
+          <!-- internet -->
+          <path d="M440 108 a18 18 0 0 1 8-34 a24 24 0 0 1 44-6 a18 18 0 0 1 22 22 a14 14 0 0 1-4 18z" fill="rgba(239,68,68,.18)" stroke="#EF4444"/>
+          <text x="478" y="132" text-anchor="middle" class="svg-txt svg-mono" font-size="11">8.8.8.8</text>
+          <text x="478" y="148" text-anchor="middle" class="svg-txt svg-mono" font-size="10" fill="#94A3B8">GW 203.0.113.1</text>
+          <!-- serveur -->
+          <rect x="452" y="240" width="52" height="64" rx="6" fill="#0B1224" stroke="#A78BFA"/>
+          <line x1="460" y1="256" x2="496" y2="256" stroke="#A78BFA"/><line x1="460" y1="270" x2="496" y2="270" stroke="#A78BFA"/><line x1="460" y1="284" x2="496" y2="284" stroke="#A78BFA"/>
+          <text x="478" y="322" text-anchor="middle" class="svg-txt" font-size="11" font-weight="700">Web Extranet</text>
+          <text x="478" y="337" text-anchor="middle" class="svg-txt svg-mono" font-size="10" fill="#94A3B8">192.168.50.80</text>
+          <!-- paquets -->
+          <circle r="6" fill="#FF8A3D"><animateMotion dur="3.2s" repeatCount="indefinite" path="M140 196 L282 182 L428 88"/></circle>
+          <circle r="6" fill="#86EFAC"><animateMotion dur="3.2s" begin="1.6s" repeatCount="indefinite" path="M140 196 L282 182 L428 280"/></circle>
+        </svg>
+        <div class="legend"><span class="zone users">Users_Net</span><span class="zone outside">Internet</span><span class="zone extranet">Extranet</span><span>Topologie réelle du Lab 5/6</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap g-layout">
+  <!-- ================= SOMMAIRE ================= -->
+  <aside class="toc" aria-label="Sommaire du guide">
+    <div class="toc-head">
+      <div class="toc-ring" aria-hidden="true">
+        <svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="18"/><circle class="fg" cx="22" cy="22" r="18"/></svg>
+        <b>0%</b>
+      </div>
+      <div><strong>Sommaire</strong><small>Progression de lecture</small></div>
+      <button type="button" class="btn sm toc-toggle" aria-expanded="false" aria-controls="toc-nav">Menu</button>
+    </div>
+    <nav id="toc-nav"><ol></ol></nav>
+    <a class="btn sm primary toc-cta" href="simulateur-securite.html">Simulateur de règle →</a>
+  </aside>
+
+  <main class="g-main" id="contenu">
+
+    <!-- ===== 1. Concepts ===== -->
+    <section id="concepts" data-toc="Types de règles & règles par défaut">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">01</span>
+        <div><h2>Les 3 types de règles et les règles par défaut</h2>
+        <p>Une règle de sécurité compare une session à des critères (zones, adresses, utilisateur, application, service, URL) puis applique une action : <b>allow</b>, <b>deny</b>, <b>drop</b> ou <b>reset</b>.</p></div>
+      </div>
+
+      <div class="grid g3">
+        <article class="card ccard" data-reveal data-delay="0">
+          <h3><span class="em">🔁</span> intrazone</h3>
+          <p>Trafic <b>à l'intérieur d'une même zone</b> (source zone = destination zone). Ex. Users_Net → Users_Net.</p>
+          <svg viewBox="0 0 200 60" aria-hidden="true" style="margin-top:10px;width:100%"><rect x="2" y="6" width="196" height="48" rx="10" fill="rgba(56,189,248,.12)" stroke="#38BDF8"/><circle cx="40" cy="30" r="9" fill="#38BDF8"/><circle cx="160" cy="30" r="9" fill="#38BDF8"/><path d="M52 30 H148" stroke="#38BDF8" stroke-width="2" class="flow-line"/></svg>
+        </article>
+        <article class="card ccard" data-reveal data-delay="120">
+          <h3><span class="em">↔️</span> interzone</h3>
+          <p>Trafic <b>entre zones différentes</b> uniquement. Ex. Users_Net → Internet.</p>
+          <svg viewBox="0 0 200 60" aria-hidden="true" style="margin-top:10px;width:100%"><rect x="2" y="6" width="86" height="48" rx="10" fill="rgba(56,189,248,.12)" stroke="#38BDF8"/><rect x="112" y="6" width="86" height="48" rx="10" fill="rgba(239,68,68,.12)" stroke="#EF4444"/><circle cx="40" cy="30" r="9" fill="#38BDF8"/><circle cx="160" cy="30" r="9" fill="#EF4444"/><path d="M52 30 H148" stroke="#FF8A3D" stroke-width="2" class="flow-line"/></svg>
+        </article>
+        <article class="card ccard" data-reveal data-delay="240">
+          <h3><span class="em">🌐</span> universal <span class="badge or" style="margin-left:auto">défaut</span></h3>
+          <p>Type <b>par défaut</b> d'une nouvelle règle (onglet General › Rule Type) : s'applique <b>à l'intrazone ET à l'interzone</b> pour les zones listées.</p>
+          <svg viewBox="0 0 200 60" aria-hidden="true" style="margin-top:10px;width:100%"><rect x="2" y="6" width="86" height="48" rx="10" fill="rgba(56,189,248,.12)" stroke="#38BDF8"/><rect x="112" y="6" width="86" height="48" rx="10" fill="rgba(239,68,68,.12)" stroke="#EF4444"/><circle cx="25" cy="30" r="8" fill="#38BDF8"/><circle cx="65" cy="30" r="8" fill="#38BDF8"/><circle cx="160" cy="30" r="8" fill="#EF4444"/><path d="M33 30 H57" stroke="#38BDF8" stroke-width="2" class="flow-line"/><path d="M73 30 H152" stroke="#FF8A3D" stroke-width="2" class="flow-line"/></svg>
+        </article>
+      </div>
+
+      <h4 data-reveal>Les deux règles prédéfinies (toujours en bas de la base de règles)</h4>
+      <div class="pan" data-mock="Security" data-menu="Policies" data-path="Policies › Security" data-reveal data-foot="table">
+        <div class="pan-tbl"><table>
+          <thead><tr><th></th><th>Name</th><th>Type</th><th>Source Zone</th><th>Destination Zone</th><th>Application</th><th>Service</th><th>Action</th><th>Log</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><b>Users_to_Extranet</b></td><td>universal</td><td><span class="zchip" style="background:var(--z-users)">Users_Net</span></td><td><span class="zchip" style="background:var(--z-extranet)">Extranet</span></td><td>any</td><td>application-default</td><td class="act-allow">Allow</td><td>session end</td></tr>
+            <tr class="dflt"><td>2</td><td>intrazone-default</td><td>intrazone</td><td>any</td><td>(intrazone)</td><td>any</td><td>any</td><td class="act-allow">Allow</td><td class="pan-dim">— non loggé</td></tr>
+            <tr class="dflt"><td>3</td><td>interzone-default</td><td>interzone</td><td>any</td><td>any</td><td>any</td><td>any</td><td class="act-deny">Deny</td><td class="pan-dim">— non loggé</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <p class="pan-cap">Capture simulée — état après la première règle du Lab 6</p>
+
+      <div class="grid g2" style="margin-top:14px">
+        <div class="callout ok" data-reveal="left"><b>intrazone-default → Allow</b>Par défaut, le firewall <b>autorise implicitement</b> le trafic à l'intérieur d'une même zone.</div>
+        <div class="callout bad" data-reveal="right"><b>interzone-default → Deny</b>Tout trafic entre deux zones différentes est <b>refusé</b> tant qu'aucune règle explicite ne l'autorise.</div>
+      </div>
+      <details class="why">
+        <summary>Pourquoi mon ping vers 8.8.8.8 n'apparaît-il pas dans le Traffic log ?</summary>
+        <div class="why-in">C'est la question piège du Lab 6. Deux raisons : (1) aucune règle n'autorise encore Users_Net → Internet, donc la session tombe sur <code class="i">interzone-default</code> (deny) ; (2) <b>les règles prédéfinies ne journalisent pas par défaut</b>, alors que les règles personnalisées journalisent par défaut (Log at Session End). Pour voir ces refus : sélectionner <span class="path">interzone-default</span> sans l'ouvrir → bouton <b>Override</b> → onglet <b>Actions</b> → cocher <b>Log at Session End</b> → OK → Commit.</div>
+      </details>
+    </section>
+
+    <!-- ===== 2. Évaluation ===== -->
+    <section id="evaluation" data-toc="Évaluation top-down & ordre de traitement">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">02</span>
+        <div><h2>Évaluation top-down, première correspondance</h2>
+        <p>Les règles sont évaluées <b>de haut en bas</b> ; dès qu'une règle correspond, <b>les suivantes ne sont plus évaluées</b>. L'ordre est donc une décision de sécurité.</p></div>
+      </div>
+
+      <div class="panel" style="padding:16px" data-reveal data-topdown='[{"label":"192.168.1.20 → 8.8.8.8 (ping)","match":"Users_to_Internet","action":"allow"},{"label":"192.168.1.20 → IP « Known malicious »","match":"Block-to-Known-Bad-Addresses","action":"deny"},{"label":"192.168.1.20 → 192.168.50.80 (web-browsing)","match":"Users_to_Extranet","action":"allow"},{"label":"Hôte Internet quelconque → 192.168.1.20","match":"interzone-default","action":"deny"},{"label":"192.168.1.20 → 192.168.1.30 (même zone)","match":"intrazone-default","action":"allow"}]'>
+        <div class="row" style="margin-bottom:10px">
+          <b>Démo : où tombe ce paquet ?</b><span class="spacer"></span>
+          <button type="button" class="btn sm primary" data-run>▶ Envoyer un paquet</button>
+        </div>
+        <div class="pan">
+          <div class="pan-tbl"><table>
+            <thead><tr><th>#</th><th>Name</th><th>Source Zone</th><th>Destination Zone</th><th>Destination</th><th>Service</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr data-rule="Block-to-Known-Bad-Addresses"><td>1</td><td>Block-to-Known-Bad-Addresses</td><td>Users_Net, Extranet</td><td>Internet</td><td>3 listes PAN (EDL)</td><td>any</td><td class="act-deny">Deny</td></tr>
+              <tr data-rule="Block-from-Known-Bad-Addresses"><td>2</td><td>Block-from-Known-Bad-Addresses</td><td>Internet</td><td>Users_Net, Extranet</td><td>any</td><td>any</td><td class="act-deny">Deny</td></tr>
+              <tr data-rule="Users_to_Extranet"><td>3</td><td>Users_to_Extranet</td><td>Users_Net</td><td>Extranet</td><td>any</td><td>application-default</td><td class="act-allow">Allow</td></tr>
+              <tr data-rule="Users_to_Internet"><td>4</td><td>Users_to_Internet</td><td>Users_Net</td><td>Internet</td><td>any</td><td>application-default</td><td class="act-allow">Allow</td></tr>
+              <tr data-rule="Extranet_to_Internet"><td>5</td><td>Extranet_to_Internet</td><td>Extranet</td><td>Internet</td><td>any</td><td>application-default</td><td class="act-allow">Allow</td></tr>
+              <tr data-rule="intrazone-default" class="dflt"><td>6</td><td>intrazone-default</td><td>any</td><td>(intrazone)</td><td>any</td><td>any</td><td class="act-allow">Allow</td></tr>
+              <tr data-rule="interzone-default" class="dflt"><td>7</td><td>interzone-default</td><td>any</td><td>any</td><td>any</td><td>any</td><td class="act-deny">Deny</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <p class="td-out small mut" aria-live="polite" style="margin-top:10px">Cliquez pour faire défiler un paquet dans la base de règles finale du Lab 6.</p>
+      </div>
+
+      <div class="callout warn" data-reveal><b>Rule shadowing (règle masquée)</b>Si une règle large est placée au-dessus d'une règle plus précise, celle-ci ne sera jamais atteinte. Au commit, l'onglet <b>Rule Shadow</b> de la fenêtre Commit Status signale les règles masquées : réordonnez-les (Move / glisser-déposer) ou affinez-les.</div>
+
+      <h4 data-reveal>Où se place la politique de sécurité dans le traitement d'un paquet</h4>
+      <ol class="pipe" data-cycle data-reveal>
+        <li><b>Session existante ?</b>Si oui → traitement rapide (fast path).</li>
+        <li><b>Zone source</b>Déterminée par l'interface d'entrée. Zone / DoS Protection.</li>
+        <li><b>Forwarding lookup</b>PBF puis table de routage.</li>
+        <li class="key"><b>Zone destination</b>+ vérification DNAT (politique NAT évaluée).</li>
+        <li class="key"><b>Security Policy check</b>Sur les <b>IP pré-NAT</b> (App-ID encore ignoré) → ID de session.</li>
+        <li><b>App-ID / Content-ID</b>Identification de l'application, inspection.</li>
+        <li class="key"><b>Enforcement</b>Security Policy (avec App-ID) + Security Profiles.</li>
+        <li><b>Forward</b>NAT appliqué, paquet transmis.</li>
+      </ol>
+      <details class="why">
+        <summary>Pourquoi deux contrôles de la politique de sécurité ?</summary>
+        <div class="why-in">Au premier paquet, l'application n'est pas encore connue : le firewall vérifie qu'une règle peut correspondre sur les critères réseau (zones, IP pré-NAT, port) et crée la session. Une fois l'application identifiée par App-ID, la politique est réévaluée avec l'application réelle, puis les Security Profiles (Content-ID) sont appliqués. Une session = un flux client→serveur (c2s) qu'une règle doit autoriser ; le flux retour (s2c) est autorisé automatiquement.</div>
+      </details>
+    </section>
+
+    <!-- ===== 3. Objets ===== -->
+    <section id="objets" data-toc="Objets, services & applications">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">03</span>
+        <div><h2>Les briques : objets, services, applications</h2>
+        <p>Une règle lisible réutilise des <b>objets</b> plutôt que des IP en dur. On les crée dans l'onglet <b>Objects</b> avant de construire la règle.</p></div>
+      </div>
+      <div class="grid g2">
+        <article class="card ccard" data-reveal>
+          <h3><span class="em">📍</span> Address / Address Group</h3>
+          <p><span class="path">Objects › Addresses › Add</span> : IP Netmask, IP Range, IP Wildcard Mask ou FQDN.</p>
+          <ul class="list small">
+            <li><b>Static Address Group</b> : membres ajoutés à la main, commit nécessaire.</li>
+            <li><b>Dynamic Address Group</b> : membres ajoutés via des <b>tags</b>, sans commit.</li>
+            <li>Les <b>External Dynamic Lists</b> prédéfinies (ex. <i>Palo Alto Networks – Known malicious IP addresses</i>) s'utilisent comme des adresses.</li>
+          </ul>
+        </article>
+        <article class="card ccard" data-reveal data-delay="100">
+          <h3><span class="em">🔌</span> Service</h3>
+          <p><span class="path">Objects › Services › Add</span> : protocole TCP/UDP + port(s) de destination.</p>
+          <ul class="list small">
+            <li>Seuls <code class="i">service-http</code> (TCP 80, 8080) et <code class="i">service-https</code> (TCP 443) sont prédéfinis.</li>
+            <li><code class="i">any</code> = tous les ports. À éviter sur une règle <i>allow</i>.</li>
+          </ul>
+        </article>
+        <article class="card ccard" data-reveal>
+          <h3><span class="em">🧩</span> Application (App-ID)</h3>
+          <p>Onglet <b>Application</b> : <code class="i">Any</code> par défaut. En production, listez les applications réelles (ex. <code class="i">web-browsing</code>, <code class="i">ssl</code>, <code class="i">dns</code>) et ajoutez leurs <b>dépendances</b> : le commit signale les dépendances non résolues.</p>
+        </article>
+        <article class="card ccard" data-reveal data-delay="100">
+          <h3><span class="em">🎯</span> application-default</h3>
+          <p>Valeur par défaut du champ <b>Service</b>. L'application n'est autorisée que sur <b>ses ports standards</b> : web-browsing sur TCP 80, ssl sur TCP 443. Bloque l'évasion de port (une appli légitime sur un port exotique).</p>
+        </article>
+        <article class="card ccard" data-reveal>
+          <h3><span class="em">🏷️</span> Tags</h3>
+          <p><span class="path">Objects › Tags › Add</span> : couleur + nom. Sur les règles et objets, pour filtrer, repérer visuellement et regrouper (<b>Group Rules By Tag</b> / vue par groupes de tags), sans changer la priorité des règles.</p>
+        </article>
+        <article class="card ccard" data-reveal data-delay="100">
+          <h3><span class="em">🕒</span> Schedules</h3>
+          <p><span class="path">Objects › Schedules › Add</span> (format 24 h : quotidien, jours de semaine, dates), puis appliqué dans l'onglet <b>Actions › Schedule</b> de la règle.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===== 4. Profils / logs / optimizer ===== -->
+    <section id="profils" data-toc="Profils, logs & Policy Optimizer">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">04</span>
+        <div><h2>Security Profiles, logging, hit count & Policy Optimizer</h2>
+        <p>Une règle <i>allow</i> n'est qu'une porte ouverte. Ce qui la rend sûre : les profils de sécurité et la visibilité (logs, compteurs).</p></div>
+      </div>
+      <div class="t-wrap" data-reveal>
+        <table class="gtable">
+          <thead><tr><th>Élément</th><th>Où ?</th><th>À retenir</th></tr></thead>
+          <tbody>
+            <tr><td>Security Profiles</td><td>Règle › Actions › Profile Setting</td><td>Profile Type <b>Profiles</b> (Antivirus, Anti-Spyware, Vulnerability Protection, URL Filtering, File Blocking, WildFire Analysis) ou <b>Group</b>. Appliqués uniquement au trafic <i>autorisé</i>.</td></tr>
+            <tr><td>Log at Session End</td><td>Règle › Actions › Log Setting</td><td>Coché <b>par défaut</b> sur les règles personnalisées, <b>pas</b> sur intrazone/interzone-default.</td></tr>
+            <tr><td>Log at Session Start</td><td>Règle › Actions › Log Setting</td><td>À activer <b>temporairement</b> pour le dépannage (génère beaucoup de logs).</td></tr>
+            <tr><td>Hit Count</td><td>Policies › Security (colonnes Hit Count, First/Last Hit)</td><td>Vérifier qu'une règle est utilisée. Remise à zéro : <b>Reset Rule Hit Counter › Selected rules</b> (pas de commit).</td></tr>
+            <tr><td>Rule Usage</td><td>Policies › Security › Policy Optimizer › Rule Usage</td><td>Trouver les règles inutilisées (depuis le dernier redémarrage du data plane) pour les supprimer ; les règles inutilisées sont surlignées.</td></tr>
+            <tr><td>Test Policy Match</td><td>Policies › Security › Test Policy Match</td><td>Simuler une session et voir quelle règle correspond (équivalent CLI : <code class="i">test security-policy-match</code>).</td></tr>
+            <tr><td>Audit Comment / Rule Changes Archive</td><td>Règle › General</td><td>Tracer qui a changé quoi et quand ; comparer des versions de la règle.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== 5. TUTO ===== -->
+    <section id="tuto" data-toc="Tuto : la règle Users_to_Internet">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">05</span>
+        <div><h2>Tuto complet : autoriser Users_Net → Internet</h2>
+        <p>Cas réel du Lab 6 : les postes de la zone <span class="zone users">Users_Net</span> (192.168.1.0/24) doivent accéder à la zone <span class="zone outside">Internet</span>. Valeurs exactes du lab, plus les améliorations « production » clairement signalées.</p></div>
+      </div>
+
+      <div class="t-wrap" data-reveal>
+        <table class="gtable">
+          <thead><tr><th>Paramètre (Lab 6)</th><th>Valeur</th></tr></thead>
+          <tbody>
+            <tr><td>Rule Name</td><td><code class="i">Users_to_Internet</code></td></tr>
+            <tr><td>Description</td><td>Allows hosts in Users_Net zone to access Internet zone</td></tr>
+            <tr><td>Source Zone</td><td><span class="zone users">Users_Net</span></td></tr>
+            <tr><td>Destination Zone</td><td><span class="zone outside">Internet</span></td></tr>
+            <tr><td>Application</td><td>Any</td></tr>
+            <tr><td>Service</td><td>application-default</td></tr>
+            <tr><td>URL Category</td><td>Any</td></tr>
+            <tr><td>Action</td><td>Allow</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row small mut" style="gap:8px;margin-bottom:18px"><span class="badge or tag-lab">Lab</span> valeur exacte du lab guide <span class="badge ok tag-lab">Prod</span> bonne pratique recommandée hors lab</div>
+
+      <div class="gsteps">
+
+        <!-- Étape 1 -->
+        <div class="gstep" id="etape-1">
+          <div class="gnum"><b>1</b></div>
+          <div class="gbody">
+            <h3>Prérequis : interfaces, zones et routage</h3>
+            <p class="sub">Une règle se construit sur des <b>zones</b>. Sans interface dans une zone, pas de trafic à filtrer. Ces éléments viennent du Lab 5 (config <code class="i">edu-210-11.0b-06.xml</code> chargée via Device › Setup › Operations › Load named configuration snapshot).</p>
+            <div class="pan" data-mock="Ethernet" data-menu="Network" data-path="Network › Interfaces › Ethernet" data-reveal>
+              <div class="pan-tbl"><table>
+                <thead><tr><th>Interface</th><th>Interface Type</th><th>Virtual Router</th><th>Security Zone</th><th>IP Address</th><th>Comment</th></tr></thead>
+                <tbody>
+                  <tr><td>ethernet1/1</td><td>Layer3</td><td>VR-1</td><td><span class="zchip" style="background:var(--z-outside)">Internet</span></td><td>203.0.113.20/24</td><td>Internet connection</td></tr>
+                  <tr class="hl"><td>ethernet1/2</td><td>Layer3</td><td>VR-1</td><td><span class="zchip" style="background:var(--z-users)">Users_Net</span></td><td>192.168.1.1/24</td><td>Users network connection</td></tr>
+                  <tr><td>ethernet1/3</td><td>Layer3</td><td>VR-1</td><td><span class="zchip" style="background:var(--z-extranet)">Extranet</span></td><td>192.168.50.1/24</td><td>Extranet servers connection</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+            <div class="grid g2">
+              <div class="pan" data-mock="Zones" data-menu="Network" data-path="Network › Zones" data-reveal="left">
+                <div class="pan-tbl"><table>
+                  <thead><tr><th>Name</th><th>Type</th><th>Interfaces</th></tr></thead>
+                  <tbody>
+                    <tr><td>Internet</td><td>layer3</td><td>ethernet1/1</td></tr>
+                    <tr class="hl"><td>Users_Net</td><td>layer3</td><td>ethernet1/2</td></tr>
+                    <tr><td>Extranet</td><td>layer3</td><td>ethernet1/3</td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+              <div class="pan" data-mock="Virtual Router - VR-1 › Static Routes" data-menu="Network" data-path="Network › Virtual Routers" data-reveal="right">
+                <div class="pan-body">
+                  <div class="pan-row"><span>Name</span><span class="pan-val">Firewall-Default-Gateway</span></div>
+                  <div class="pan-row"><span>Destination</span><span class="pan-val">0.0.0.0/0</span></div>
+                  <div class="pan-row"><span>Interface</span><span class="pan-val">ethernet1/1</span></div>
+                  <div class="pan-row"><span>Next Hop</span><span class="pan-val">IP Address · 203.0.113.1</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="callout warn"><b>Les noms de zones sont sensibles à la casse</b><code class="i">Users_Net</code> ≠ <code class="i">users_net</code>. Restez cohérent dans toute la configuration.</div>
+            <details class="why">
+              <summary>Pourquoi vérifier le routage avant la règle ?</summary>
+              <div class="why-in">La <b>zone de destination</b> d'une session est déterminée par le <b>lookup de routage</b> : 8.8.8.8 correspond à la route par défaut 0.0.0.0/0 via ethernet1/1, donc la zone de destination est <b>Internet</b>. Si la route manque, aucune règle « → Internet » ne pourra jamais correspondre.</div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Étape 2 -->
+        <div class="gstep" id="etape-2">
+          <div class="gnum"><b>2</b></div>
+          <div class="gbody">
+            <h3>Créer les objets réutilisables <span class="badge ok tag-lab">Prod</span></h3>
+            <p class="sub">Le Lab 6 laisse les adresses sur <b>Any</b>. En production, on décrit le sous-réseau source avec un objet et on tague la règle. Ces deux objets sont <b>optionnels pour le lab</b>.</p>
+            <div class="grid g2">
+              <div class="pan" data-mock="Address" data-menu="Objects" data-path="Objects › Addresses › Add" data-foot="ok" data-reveal="left">
+                <div class="pan-body">
+                  <div class="pan-row"><span>Name</span><span class="pan-val fill">Users_Net-Subnet</span></div>
+                  <div class="pan-row"><span>Description</span><span class="pan-val fill">Réseau des postes utilisateurs</span></div>
+                  <div class="pan-row"><span>Type</span><span class="pan-val pan-sel">IP Netmask</span></div>
+                  <div class="pan-row"><span>Address</span><span class="pan-val fill">192.168.1.0/24</span></div>
+                  <div class="pan-row"><span>Tags</span><span class="pan-val fill">Internet-Access</span></div>
+                </div>
+              </div>
+              <div class="pan" data-mock="Tag" data-menu="Objects" data-path="Objects › Tags › Add" data-foot="ok" data-reveal="right">
+                <div class="pan-body">
+                  <div class="pan-row"><span>Name</span><span class="pan-val fill">Internet-Access</span></div>
+                  <div class="pan-row"><span>Color</span><span class="pan-val pan-sel"><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FA582D;margin-right:6px"></span>Orange</span></span></div>
+                  <div class="pan-row"><span>Comments</span><span class="pan-val fill">Règles d'accès sortant</span></div>
+                </div>
+              </div>
+            </div>
+            <details class="why">
+              <summary>Pourquoi un objet plutôt que taper 192.168.1.0/24 dans la règle ?</summary>
+              <div class="why-in">Un objet a un nom parlant, se réutilise dans plusieurs règles (sécurité, NAT, PBF) et se modifie à un seul endroit. Le <b>Global Find</b> retrouve toutes ses utilisations. Un tag permet de filtrer la base de règles et de la voir par groupes.</div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div class="gstep" id="etape-3">
+          <div class="gnum"><b>3</b></div>
+          <div class="gbody">
+            <h3>Créer la règle, onglet par onglet</h3>
+            <p class="sub"><span class="path">Policies › Security</span> → bouton <b>Add</b> en bas de la fenêtre. Cliquez sur les onglets des captures pour naviguer entre les sous-étapes.</p>
+
+            <h4>3a · Onglet General</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="General" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="pan-row"><span>Name <i class="pin">1</i></span><span class="pan-val fill">Users_to_Internet</span></div>
+                <div class="pan-row"><span>Rule Type</span><span class="pan-val pan-sel">universal (default)</span></div>
+                <div class="pan-row"><span>Description <i class="pin">2</i></span><span class="pan-val fill">Allows hosts in Users_Net zone to access Internet zone</span></div>
+                <div class="pan-row"><span>Tags</span><span class="pan-val">Internet-Access <span class="pan-dim">(Prod, optionnel)</span></span></div>
+                <div class="pan-row"><span>Group Rules By Tag</span><span class="pan-val pan-sel pan-dim">None</span></div>
+                <div class="pan-row"><span>Audit Comment</span><span class="pan-val pan-dim">Ticket / auteur / raison du changement</span></div>
+              </div>
+            </div>
+            <ol class="do-list">
+              <li><b>Name</b> : <code class="i">Users_to_Internet</code> — un nom qui dit « qui → où ».</li>
+              <li><b>Description</b> : optionnelle mais fortement recommandée par le lab. Laissez Rule Type sur <b>universal</b>.</li>
+            </ol>
+
+            <h4>3b · Onglet Source</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="Source" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="pan-cols">
+                  <div class="pan-box"><h5><span class="chk"></span>Any <span class="r">Source Zone</span></h5><ul><li class="fill hl"><span class="chk on"></span>Users_Net</li></ul><div class="add"><span>⊕ Add</span><span>⊖ Delete</span></div></div>
+                  <div class="pan-box"><h5><span class="chk on"></span>Any <span class="r">Source Address</span></h5><ul><li class="pan-dim">Prod : Users_Net-Subnet</li></ul><div class="add"><span>⊕ Add</span><span>☐ Negate</span></div></div>
+                  <div class="pan-box"><h5><span class="pan-sel" style="width:100%">any</span></h5><ul><li class="pan-dim">Source User</li></ul></div>
+                  <div class="pan-box"><h5><span class="pan-sel" style="width:100%">any</span></h5><ul><li class="pan-dim">Source Device</li></ul></div>
+                </div>
+                <div class="pan-hint">Source Zone › Add › <b>Users_Net</b>. Laissez le reste inchangé (lab). En prod, remplacez Source Address Any par l'objet <b>Users_Net-Subnet</b>.</div>
+              </div>
+            </div>
+
+            <h4>3c · Onglet Destination</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="Destination" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="pan-cols">
+                  <div class="pan-box"><h5><span class="pan-sel" style="width:100%">select</span></h5><ul><li class="fill hl"><span class="chk on"></span>Internet</li></ul><div class="add"><span>⊕ Add</span><span>⊖ Delete</span></div></div>
+                  <div class="pan-box"><h5><span class="chk on"></span>Any <span class="r">Destination Address</span></h5><ul><li class="pan-dim">—</li></ul><div class="add"><span>⊕ Add</span><span>☐ Negate</span></div></div>
+                  <div class="pan-box"><h5><span class="chk on"></span>Any <span class="r">Destination Device</span></h5><ul><li class="pan-dim">—</li></ul></div>
+                </div>
+                <div class="pan-hint">Destination Zone › Add › <b>Internet</b>. Destination Address reste <b>Any</b> : on ne connaît pas à l'avance les serveurs Internet.</div>
+              </div>
+            </div>
+
+            <h4>3d · Onglet Application</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="Application" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="pan-box"><h5><span class="chk on"></span>Any <span class="r">Applications</span></h5><ul><li class="pan-dim">Prod : web-browsing, ssl, dns… + dépendances</li></ul><div class="add"><span>⊕ Add</span><span>⊖ Delete</span></div></div>
+                <div class="pan-hint">Lab : ne rien changer, notez que <b>Any</b> est coché (App-ID est traité plus loin dans le cours).</div>
+              </div>
+            </div>
+
+            <h4>3e · Onglet Service/URL Category</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="Service/URL Category" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="pan-cols">
+                  <div class="pan-box"><h5><span class="pan-sel fill" style="width:100%">application-default</span></h5><ul><li class="pan-dim">Service</li></ul></div>
+                  <div class="pan-box"><h5><span class="chk on"></span>Any <span class="r">URL Category</span></h5><ul><li class="pan-dim">—</li></ul></div>
+                </div>
+                <div class="pan-hint">Lab : Service déjà sur <b>application-default</b> → l'appli n'est autorisée que sur ses ports standards (web-browsing TCP 80, ssl TCP 443).</div>
+              </div>
+            </div>
+
+            <h4>3f · Onglet Actions</h4>
+            <div class="pan" data-mock="Security Policy Rule" data-menu="Policies" data-path="Policies › Security › Add" data-tabs="General|Source|Destination|Application|Service/URL Category|Actions|Usage" data-active="Actions" data-group="r1" data-foot="ok" data-reveal>
+              <div class="pan-body">
+                <div class="grid g2" style="gap:14px">
+                  <div>
+                    <div class="pan-sec">Action Setting</div>
+                    <div class="pan-row"><span>Action</span><span class="pan-val pan-sel fill">Allow</span></div>
+                    <div class="pan-row"><span>Send ICMP Unreachable</span><span><span class="chk"></span></span></div>
+                    <div class="pan-sec">Profile Setting</div>
+                    <div class="pan-row"><span>Profile Type</span><span class="pan-val pan-sel">None <span class="pan-dim">→ Prod : Group</span></span></div>
+                  </div>
+                  <div>
+                    <div class="pan-sec">Log Setting</div>
+                    <div class="pan-row"><span>Log at Session Start</span><span><span class="chk"></span></span></div>
+                    <div class="pan-row"><span>Log at Session End</span><span><span class="chk on"></span></span></div>
+                    <div class="pan-row"><span>Log Forwarding</span><span class="pan-val pan-sel">None</span></div>
+                    <div class="pan-sec">Other Settings</div>
+                    <div class="pan-row"><span>Schedule</span><span class="pan-val pan-sel">None</span></div>
+                  </div>
+                </div>
+                <div class="pan-hint">Vérifiez que l'Action est <b>Allow</b> puis cliquez <b>OK</b>.</div>
+              </div>
+            </div>
+            <div class="callout bad"><b>Piège classique : Action = Allow par défaut</b>Une nouvelle règle est créée avec l'action <b>Allow</b>. Pour une règle de blocage (ex. Block-to-Known-Bad-Addresses), passez dans l'onglet Actions et choisissez <b>Deny</b> avant le commit — et mettez le Service sur <b>any</b> (recommandation PAN pour les règles deny).</div>
+            <details class="why">
+              <summary>Pourquoi ne pas cocher « Log at Session Start » en permanence ?</summary>
+              <div class="why-in">Le log de fin de session contient déjà toutes les infos utiles (application finale, octets, raison de fin). Le log de début multiplie le volume de logs ; on l'active temporairement pour dépanner une session qui ne se termine jamais ou dont l'application change.</div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Étape 4 -->
+        <div class="gstep" id="etape-4">
+          <div class="gnum"><b>4</b></div>
+          <div class="gbody">
+            <h3>Placer la règle au bon endroit, puis Commit</h3>
+            <p class="sub">Sélectionnez la règle (sans l'ouvrir) → <b>Move › Move Bottom</b> : elle se place en fin de base, <i>au-dessus</i> des deux règles par défaut. Les règles de blocage restent en haut (Move › Move Top).</p>
+            <div class="pan" data-mock="Security" data-menu="Policies" data-path="Policies › Security" data-foot="table" data-reveal>
+              <div class="pan-tbl"><table>
+                <thead><tr><th></th><th>Name</th><th>Action</th><th>Tags</th><th>Source Zone</th><th>Destination Zone</th><th>Destination Address</th><th>Service</th><th>Hit Count</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>Block-to-Known-Bad-Addresses</td><td class="act-deny">Deny</td><td>none</td><td>Users_Net, Extranet</td><td>Internet</td><td>Bulletproof / High risk / Known malicious</td><td>any</td><td>0</td></tr>
+                  <tr><td>2</td><td>Block-from-Known-Bad-Addresses</td><td class="act-deny">Deny</td><td>none</td><td>Internet</td><td>Users_Net, Extranet</td><td>any</td><td>any</td><td>0</td></tr>
+                  <tr><td>3</td><td>Users_to_Extranet</td><td class="act-allow">Allow</td><td>none</td><td><span class="zchip" style="background:var(--z-users)">Users_Net</span></td><td><span class="zchip" style="background:var(--z-extranet)">Extranet</span></td><td>any</td><td>application-default</td><td>12</td></tr>
+                  <tr class="hl"><td>4</td><td><b>Users_to_Internet</b></td><td class="act-allow">Allow</td><td>none</td><td><span class="zchip" style="background:var(--z-users)">Users_Net</span></td><td><span class="zchip" style="background:var(--z-outside)">Internet</span></td><td>any</td><td>application-default</td><td>—</td></tr>
+                  <tr><td>5</td><td>Extranet_to_Internet</td><td class="act-allow">Allow</td><td>none</td><td><span class="zchip" style="background:var(--z-extranet)">Extranet</span></td><td><span class="zchip" style="background:var(--z-outside)">Internet</span></td><td>any</td><td>application-default</td><td>—</td></tr>
+                  <tr class="dflt"><td>6</td><td>intrazone-default</td><td class="act-allow">Allow</td><td>none</td><td>any</td><td>(intrazone)</td><td>any</td><td>any</td><td>—</td></tr>
+                  <tr class="dflt"><td>7</td><td>interzone-default</td><td class="act-deny">Deny</td><td>none</td><td>any</td><td>any</td><td>any</td><td>any</td><td>—</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+            <p class="pan-cap">Base de règles finale du Lab 6 (colonne Action déplacée entre Name et Tags, comme dans le lab)</p>
+            <div class="pan" data-mock="Commit" data-menu="Policies" data-path="Commit (en haut à droite)" data-foot="commit" data-reveal>
+              <div class="pan-body">
+                <div class="pan-row"><span>Commit Scope</span><span class="pan-val">Commit All Changes</span></div>
+                <div class="pan-row"><span>Changes</span><span class="pan-val">Policies › Security › Users_to_Internet (added)</span></div>
+                <div class="pan-row"><span>Commit Status</span><span class="pan-val fill" style="color:#15803D">Completed · Result: Successful</span></div>
+                <div class="pan-hint">Après le commit, vérifiez les onglets <b>Rule Shadow</b> et <b>App Dependency</b> de la fenêtre de statut.</div>
+              </div>
+            </div>
+            <details class="why">
+              <summary>Pourquoi la règle n'est-elle pas active avant le commit ?</summary>
+              <div class="why-in">Toutes les modifications de la WebUI s'appliquent à la <b>configuration candidate</b>. Seul le <b>Commit</b> la pousse dans la configuration active (running) du data plane. Exception notable : le reset du hit counter n'en a pas besoin.</div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Étape 5 -->
+        <div class="gstep" id="etape-5">
+          <div class="gnum"><b>5</b></div>
+          <div class="gbody">
+            <h3>Vérifier : Traffic log, Test Policy Match, CLI</h3>
+            <p class="sub">Depuis Client-A : <code class="i">ping 8.8.8.8</code> (Ctrl+C après quelques secondes), puis <span class="path">Monitor › Logs › Traffic</span> avec le filtre du lab.</p>
+            <div class="pan" data-mock="Traffic" data-menu="Monitor" data-path="Monitor › Logs › Traffic" data-reveal>
+              <div class="pan-body" style="padding:8px 10px;min-height:0">
+                <div class="pan-val fill" style="margin-bottom:8px">( addr.dst in 8.8.8.8 ) and ( app eq ping )</div>
+                <div class="pan-tbl"><table>
+                  <thead><tr><th>Receive Time</th><th>From Zone</th><th>To Zone</th><th>Source</th><th>Destination</th><th>Application</th><th>Action</th><th>Rule</th><th>Session End Reason</th></tr></thead>
+                  <tbody>
+                    <tr class="hl"><td>10/20 10:42:07</td><td>Users_Net</td><td>Internet</td><td>192.168.1.20</td><td>8.8.8.8</td><td>ping</td><td class="act-allow">allow</td><td><b>Users_to_Internet</b></td><td>aged-out</td></tr>
+                    <tr><td>10/20 10:31:55</td><td>Users_Net</td><td>Internet</td><td>192.168.1.20</td><td>8.8.8.8</td><td>ping</td><td class="act-deny">deny</td><td>interzone-default</td><td>policy-deny</td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+            </div>
+            <p class="pan-cap">Avant la règle : interzone-default (visible car son logging a été activé). Après : Users_to_Internet.</p>
+
+            <div class="code-wrap">
+              <span class="code-lbl">CLI · mode opérationnel</span>
+              <button type="button" class="btn sm copy-btn" data-copy-target="#cli-test">Copier</button>
+<pre class="code" id="cli-test"><span class="c"># Quelle règle correspond à ce flux ? (IP pré-NAT)</span>
+<span class="p">admin@PA-VM&gt;</span> <span class="k">test security-policy-match</span> from <span class="n">Users_Net</span> to <span class="n">Internet</span> source <span class="s">192.168.1.20</span> destination <span class="s">8.8.8.8</span> protocol 1 application ping
+
+<span class="c"># sortie abrégée</span>
+"Users_to_Internet; index: 4" {
+        from Users_Net;
+        source any;
+        to Internet;
+        destination any;
+        application/service any/application-default;
+        action <span class="w">allow</span>;
+}
+
+<span class="c"># Sessions en cours depuis le client</span>
+<span class="p">admin@PA-VM&gt;</span> <span class="k">show session all filter</span> source <span class="s">192.168.1.20</span></pre>
+            </div>
+            <div class="callout"><b>Équivalent WebUI</b><span class="path">Policies › Security › Test Policy Match</span> (bas de page) : renseignez From/To, Source, Destination, Protocol… et la règle correspondante s'affiche. Pensez aussi à la colonne <b>Hit Count</b> (bouton Refresh) et au <b>Log Viewer</b> du menu déroulant de la règle.</div>
+            <details class="why">
+              <summary>Le trafic est autorisé… mais le ping ne reçoit aucune réponse. Pourquoi ?</summary>
+              <div class="why-in">C'est la dernière question du Lab 6 (indice : le titre du module suivant). Les paquets sortent vers Internet avec l'adresse source privée <b>192.168.1.20</b>, non routable sur Internet : la réponse ne revient jamais. Il manque une règle de <b>Source NAT</b> vers 203.0.113.20. → Suite dans le <a href="guide-nat.html#tuto-snat">Guide NAT, tuto A</a>.</div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Étape 6 -->
+        <div class="gstep" id="etape-6">
+          <div class="gnum"><b>6</b></div>
+          <div class="gbody">
+            <h3>Dépannage</h3>
+            <p class="sub">Les symptômes les plus fréquents en lab et leur remède.</p>
+            <div class="t-wrap">
+              <table class="gtable">
+                <thead><tr><th>Symptôme</th><th>Cause probable</th><th>Correction</th></tr></thead>
+                <tbody>
+                  <tr><td>Rien dans le Traffic log</td><td>Session sur interzone-default (non loggé par défaut) ou filtre mal saisi</td><td>Override de interzone-default › Actions › Log at Session End. Filtres sensibles à la casse : <code class="i">( addr.dst eq 8.8.8.8 )</code>.</td></tr>
+                  <tr><td>Rule = interzone-default</td><td>Aucune règle ne correspond : mauvaise zone, faute de frappe, règle non commitée</td><td>Vérifier zones/casse, faire Commit, tester avec <code class="i">test security-policy-match</code>.</td></tr>
+                  <tr><td>Une autre règle est touchée</td><td>Règle plus haute qui correspond d'abord (shadowing)</td><td>Réordonner (Move), consulter Rule Shadow au commit.</td></tr>
+                  <tr><td>Allow mais pas de réponse d'Internet</td><td>Pas de Source NAT (IP privée en sortie)</td><td>Créer la règle NAT <code class="i">Inside_Nets_to_Internet</code> (Lab 7).</td></tr>
+                  <tr><td>Appli bloquée sur un port non standard</td><td>Service = application-default</td><td>Utiliser un objet Service explicite pour ce port (ou corriger l'appli).</td></tr>
+                  <tr><td>Hit Count reste à 0</td><td>Trafic n'atteint pas la règle ou compteur réinitialisé</td><td>Refresh, vérifier le chemin réseau et l'ordre des règles.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 6. CLI ===== -->
+    <section id="cli" data-toc="Encadré CLI équivalent">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">06</span>
+        <div><h2>Encadré CLI : tout le Lab 6 en commandes</h2>
+        <p>La WebUI reste la méthode du cours ; la CLI permet de vérifier ou de rejouer une config. Mode configuration (<code class="i">configure</code>).</p></div>
+      </div>
+      <div class="code-wrap" data-reveal>
+        <span class="code-lbl">CLI · mode configuration</span>
+        <button type="button" class="btn sm copy-btn" data-copy-target="#cli-conf">Copier</button>
+<pre class="code" id="cli-conf"><span class="k">configure</span>
+
+<span class="c"># Règles de blocage (Service any, Action deny) — en haut de la base</span>
+<span class="k">set rulebase security rules</span> Block-to-Known-Bad-Addresses from [ Users_Net Extranet ] to Internet source any destination [ panw-bulletproof-ip-list panw-highrisk-ip-list panw-known-ip-list ] application any service any action deny
+<span class="k">set rulebase security rules</span> Block-from-Known-Bad-Addresses from Internet to [ Users_Net Extranet ] source [ panw-bulletproof-ip-list panw-highrisk-ip-list panw-known-ip-list ] destination any application any service any action deny
+<span class="k">move rulebase security rules</span> Block-from-Known-Bad-Addresses top
+<span class="k">move rulebase security rules</span> Block-to-Known-Bad-Addresses top
+
+<span class="c"># Règle du tuto</span>
+<span class="k">set rulebase security rules</span> Users_to_Internet from Users_Net to Internet source any destination any source-user any category any application any service application-default action allow
+<span class="k">set rulebase security rules</span> Users_to_Internet description <span class="s">"Allows hosts in Users_Net zone to access Internet zone"</span>
+<span class="k">move rulebase security rules</span> Users_to_Internet bottom
+
+<span class="c"># Journaliser la règle par défaut interzone (équivalent de Override)</span>
+<span class="k">set rulebase default-security-rules rules</span> interzone-default action deny log-end yes
+
+<span class="k">commit</span></pre>
+      </div>
+      <p class="small mut">Les noms <code class="i">panw-*-ip-list</code> sont les identifiants CLI des listes prédéfinies « Palo Alto Networks – Bulletproof / High risk / Known malicious IP addresses ». Vérifiez toujours avec <kbd>Tab</kbd> / <kbd>?</kbd> sur votre version.</p>
+    </section>
+
+    <!-- ===== 7. Do / Don't ===== -->
+    <section id="bonnes-pratiques" data-toc="À faire / à ne pas faire">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">07</span>
+        <div><h2>✗ À ne pas faire / ✓ À faire</h2>
+        <p>Le comparatif à garder en tête avant chaque commit.</p></div>
+      </div>
+      <div class="dd">
+        <div class="dd-head"><span class="b">✗ À ne pas faire</span><span class="g">✓ À faire</span></div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Règle <b>any → any, application any, service any, allow</b>.</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>Zones précises, <b>objets d'adresse</b>, applications réelles : principe du <b>moindre privilège</b>.</div>
+        </div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Service <b>any</b> sur une règle <i>allow</i> (évasion de port possible).</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><b>application-default</b> sur les allow ; <b>any</b> sur les règles <i>deny</i>.</div>
+        </div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Une règle large en haut qui <b>masque</b> les règles précises en dessous.</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>Blocages en haut, puis du <b>plus spécifique au plus général</b> ; lire l'onglet <b>Rule Shadow</b>.</div>
+        </div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Créer une règle de blocage en oubliant l'onglet Actions (reste en <b>Allow</b>).</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>Toujours relire l'onglet <b>Actions</b> avant OK.</div>
+        </div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Allow sans profil de sécurité, sans description ni tag.</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><b>Profile Group</b> sur chaque allow, Description, Tags, Audit Comment.</div>
+        </div>
+        <div class="dd-row" data-reveal>
+          <div class="dd-cell bad"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>Désactiver les logs, laisser s'accumuler des règles mortes.</div>
+          <div class="dd-cell good"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>Log at Session End, logging de interzone-default, nettoyage via <b>Hit Count</b> et <b>Policy Optimizer › Rule Usage</b>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 8. Suite ===== -->
+    <section id="suite" data-toc="Pour aller plus loin">
+      <div class="sec-head" data-reveal>
+        <span class="sec-num">08</span>
+        <div><h2>Pour aller plus loin</h2><p>Mettez en pratique sans risque.</p></div>
+      </div>
+      <div class="grid g2">
+        <a class="card hover next-card" href="simulateur-securite.html" data-reveal="left">
+          <span class="ico">🛡️</span>
+          <span><h3>Simulateur de règle de sécurité</h3><span class="mut small">Construisez une règle et testez des paquets.</span></span>
+          <span class="btn sm primary">Ouvrir →</span>
+        </a>
+        <a class="card hover next-card" href="guide-nat.html" data-reveal="right">
+          <span class="ico">🔀</span>
+          <span><h3>Guide NAT (Lab 7)</h3><span class="mut small">Faire enfin répondre ce ping vers 8.8.8.8.</span></span>
+          <span class="btn sm">Lire →</span>
+        </a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="site-foot"></div>
+<script src="../assets/js/common.js"></script>
+<script src="js/guides.js"></script>
+</body>
+</html>
