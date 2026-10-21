@@ -1,4 +1,4 @@
-/* Configurateur : sidebar + formulaire + sortie GUI/CLI */
+/* Configurateur (PAN-OS & Panorama) : sidebar + formulaire + sortie GUI/CLI + parcours */
 .cfg-app{display:grid;grid-template-columns:260px 1fr;gap:28px;padding:28px 0 20px;align-items:start}
 .cfg-sidebar{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto;padding-right:4px}
 .cfg-sidebar input{margin-bottom:12px;font-size:14px;padding:9px 12px}
@@ -8,7 +8,7 @@
 .cfg-link{display:flex;gap:9px;align-items:center;padding:7px 10px;border-radius:9px;color:var(--tx2);font-size:14px;font-weight:600;transition:.2s var(--ease)}
 .cfg-link i{font-style:normal;width:20px;text-align:center}
 .cfg-link:hover{background:var(--panel2);color:#fff;text-decoration:none;transform:translateX(3px)}
-.cfg-link.on{background:rgba(250,88,45,.15);color:#fff;box-shadow:inset 3px 0 0 var(--or)}
+.cfg-link.on{background:rgba(var(--acc-rgb),.15);color:#fff;box-shadow:inset 3px 0 0 var(--or)}
 .cfg-mainc{min-width:0}
 .cfg-head{margin-bottom:22px}
 .cfg-head h1{font-size:clamp(28px,4vw,44px);margin:8px 0 10px}
@@ -61,3 +61,110 @@
 @media (max-width:1100px){.cfg-layout{grid-template-columns:1fr}.cfg-in{position:static;max-height:none}}
 @media (max-width:860px){.cfg-app{grid-template-columns:1fr}.cfg-sidebar{position:static;max-height:260px}}
 @media (max-width:560px){.cfg-fields{grid-template-columns:1fr}.cfg-action,.cfg-pan,.cfg-step .callout{margin-left:0}}
+
+/* ---------- projet client (sidebar) ---------- */
+.cfg-project{padding:12px;margin-bottom:14px;border-radius:14px}
+.cfg-project label{margin-bottom:6px}
+.cfg-project input{margin-bottom:8px!important}
+.cfg-project-a{display:flex;gap:4px;flex-wrap:wrap}
+.cfg-project-a .btn{padding:5px 8px;font-size:12px}
+.cfg-saved{margin-top:6px;font-size:11.5px}
+.cfg-saved.flash{animation:savedFlash 1s var(--ease)}
+@keyframes savedFlash{0%{color:#86EFAC}100%{color:var(--mut)}}
+
+/* ---------- accueil ---------- */
+.cfg-home-a{margin-top:18px;gap:10px}
+.cfg-kbd-hint kbd{margin:0 2px}
+.cfg-dash-big{font-size:clamp(20px,2.4vw,26px)!important;color:#fff!important;margin-top:34px!important}
+.cfg-dash-big .small{font-weight:500;font-size:13px}
+.cfg-dash-t b{font:800 11px var(--mono);letter-spacing:.06em;padding:2px 7px;border-radius:6px;background:rgba(var(--acc-rgb),.14)}
+.cfg-dash-big>b{background:none;font-size:inherit;padding:0}
+.cfg-scn-card{border-color:rgba(var(--acc-rgb),.35);background:linear-gradient(160deg,rgba(var(--acc-rgb),.10),var(--panel) 55%)}
+.cfg-scn-chips{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0 10px}
+.cfg-scn-chips span{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:var(--panel2);font-size:14px;border:1px solid var(--line)}
+.cfg-scn-chips span.ok{border-color:var(--ok);background:rgba(34,197,94,.15)}
+.cfg-card{position:relative}
+.cfg-card-dot{position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.cfg-prog-bar.sm{height:5px}
+.cfg-in-scn{margin-top:10px}
+
+/* ---------- en-tête module ---------- */
+.cfg-head-a{margin-top:14px;gap:6px}
+.cfg-ico.sm{width:44px;height:44px;font-size:21px;border-radius:13px}
+
+/* ---------- formulaire : progression + validation animée ---------- */
+.cfg-fprog{margin-bottom:12px;font-size:12px}
+.cfg-fprog .cfg-prog-bar{height:6px}
+.cfg-fprog.full .cfg-prog-bar i{background:linear-gradient(90deg,var(--ok),#86EFAC);box-shadow:0 0 12px rgba(34,197,94,.5)}
+.cfg-fields .field{position:relative}
+.field .vmark{display:inline-grid;place-items:center;width:16px;height:16px;margin-left:6px;border-radius:50%;font-size:10px;font-weight:900;color:#06101f;background:var(--ok);
+  opacity:0;transform:scale(.3) rotate(-90deg);transition:opacity .25s,transform .45s var(--spring);vertical-align:1px}
+.field.ok .vmark{opacity:1;transform:none}
+.field.ok input[type=text],.field.ok input[type=password],.field.ok textarea,.field.ok select{border-color:rgba(34,197,94,.55)}
+input.invalid,textarea.invalid,select.invalid{animation:shake .35s var(--ease)}
+@keyframes shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.err:not(:empty){animation:fadeUp .25s var(--ease)}
+input[type=password]{width:100%;font:500 15px var(--font);color:#fff;background:rgba(0,0,0,.35);border:1px solid var(--line2);border-radius:var(--r-sm);padding:11px 13px;transition:.2s}
+.cfg-form-a{margin-top:6px;gap:6px}
+.cfg-miss{list-style:none;margin-top:10px;display:grid;gap:4px;font-size:13px}
+.cfg-miss a{font-weight:700}
+
+/* ---------- sortie ---------- */
+.cfg-modes{gap:6px}
+.cfg-prog .btn{flex:none}
+.cfg-step.commit{border-style:dashed}
+.cfg-step-h{flex-wrap:wrap}
+.pan-val[data-copyval]{cursor:copy;transition:background .2s}
+.pan-val[data-copyval]:hover{background:#FFF4EE;border-color:var(--or)}
+.pan-val.copied{animation:panhl 1s var(--ease)}
+.cfg-cli+.cfg-cli{margin-top:18px}
+.cfg-cli-t{font-weight:800;font-size:14px;margin-bottom:8px;color:var(--tx2)}
+.cfg-cli-box{position:relative}
+
+/* ---------- parcours : stepper ---------- */
+.cfg-stepper{margin:6px 0 22px;padding:14px 16px;border-radius:18px;background:var(--panel);border:1px solid var(--line);position:sticky;top:72px;z-index:5;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(11,18,36,.82)}
+.cfg-stepper-top{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px}
+.cfg-stepper-top .cfg-prog-bar{height:5px}
+.cfg-stepper ol{list-style:none;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px;position:relative}
+.cfg-stepper li{flex:1 0 auto;min-width:0;position:relative}
+.cfg-stepper li a{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 7px;border-radius:12px;color:var(--mut);font-size:12.5px;font-weight:700;border:1px solid transparent;transition:.3s var(--ease);white-space:nowrap}
+.cfg-stepper li a:hover{text-decoration:none;color:#fff;background:var(--panel2)}
+.cfg-stepper li a span{max-width:170px;overflow:hidden;text-overflow:ellipsis}
+.cfg-stepper li i{font-style:normal;width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--panel2);font-size:12px;font-weight:900;transition:.4s var(--spring)}
+.cfg-stepper li+li::before{content:"";position:absolute;left:-6px;top:50%;width:6px;height:2px;background:var(--line2)}
+.cfg-stepper li.past+li::before,.cfg-stepper li.on::before{background:var(--or)}
+.cfg-stepper li.on a{color:#fff;border-color:rgba(var(--acc-rgb),.6);background:rgba(var(--acc-rgb),.12)}
+.cfg-stepper li.on i{background:linear-gradient(135deg,var(--or),var(--or2));transform:scale(1.12);box-shadow:0 0 0 4px rgba(var(--acc-rgb),.18);animation:pulse-or 2s infinite}
+.cfg-stepper li.done i{background:var(--ok);color:#06101f}
+.cfg-stepper li.done a{color:var(--tx2)}
+.cfg-scn-h{gap:12px;margin-bottom:10px;align-items:flex-start}
+.cfg-scn-h .badge{margin-top:12px}
+.cfg-scn-title{font-size:clamp(20px,2.4vw,26px)!important;margin:0!important}
+.cfg-shared-note{margin:0 0 16px}
+.cfg-scn-step{padding:0}
+.cfg-scn-nav{margin:26px 0 10px;gap:10px;padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--panel)}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .cfg-stepper{top:64px;border-radius:14px;padding:10px}
+  .cfg-stepper li a span{display:none}
+  .cfg-stepper li.on a span{display:inline;max-width:140px}
+  .cfg-sidebar{max-height:none}
+  #cfg-side{max-height:240px;overflow:auto}
+}
+@media (max-width:560px){
+  .cfg-app{padding-top:16px;gap:16px}
+  .cfg-head-a .btn,.cfg-form-a .btn{flex:1 1 auto;justify-content:center}
+  .cfg-form-a .spacer{display:none}
+  .cfg-form-a .btn.primary{flex-basis:100%}
+  .cfg-modes [role=tab]{flex:1;padding:9px 10px;font-size:13px}
+  .cfg-modes .spacer{display:none}
+  .cfg-scn-nav{flex-direction:column;align-items:stretch}.cfg-scn-nav .btn{justify-content:center;white-space:normal;text-align:center}
+  .cfg-scn-nav .spacer{display:none}
+  .cfg-kbd-hint{display:none}
+  .cfg-pan .pan-row{grid-template-columns:1fr}
+  .cfg-in{padding:14px}
+}
+@media (prefers-reduced-motion:reduce){.cfg-step{opacity:1;transform:none}.field .vmark{transition:none}}
+.cfg-app>*{min-width:0}

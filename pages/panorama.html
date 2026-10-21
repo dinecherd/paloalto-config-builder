@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panorama 11.1 · PANW Config Builder</title>
+<meta name="description" content="Panorama 11.1 : cas d'usage clients guidés, concepts clés expliqués (templates, device groups, ordre des règles, héritage, commit et push) et tous les modules de configuration Panorama.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/hub.css">
+<link rel="stylesheet" href="../assets/css/panorama.css">
+</head>
+<body data-root="../" data-page="panorama" data-product="panorama">
+<div id="site-nav"></div>
+
+<div class="pn">
+<!-- ================= HERO ================= -->
+<header class="pn-hero" id="hero">
+  <div class="hub-aurora" id="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <div>
+      <span class="kicker fade-up">Configurateur Panorama 11.1</span>
+      <h1 class="fade-up" style="animation-delay:80ms">Une console.<br><span class="grad-cy">Toute ta flotte de pare‑feux.</span></h1>
+      <p class="lead fade-up" style="animation-delay:160ms">Templates et template stacks pour le réseau et le système, device groups pour les politiques et objets, log collectors pour la visibilité : renseigne tes valeurs, obtiens le pas-à-pas Panorama, la CLI, et les commandes de <b style="color:#fff">push vers les pare-feux</b>.</p>
+      <div class="pn-search fade-up" style="animation-delay:240ms">
+        <input type="text" id="hs" placeholder="Que veux-tu faire ? (ex. template, device group, logs, HA)" aria-label="Rechercher un module ou un parcours Panorama" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hsug">
+        <div class="pn-sug" id="hsug" role="listbox"></div>
+      </div>
+      <div class="hub-cta fade-up" style="animation-delay:320ms">
+        <a class="btn cy" href="#usecases">🧭 Cas d'usage clients</a>
+        <a class="btn ghost" href="#concepts">💡 Comprendre Panorama</a>
+        <a class="btn ghost" href="panorama-configurateur.html">Configurateur →</a>
+      </div>
+    </div>
+    <div class="fade-up" style="animation-delay:200ms">
+      <div class="pn-scene"><svg id="scene" viewBox="0 0 640 520" role="img" aria-label="Schéma animé de la hiérarchie Panorama : Shared, device groups parent et enfants, templates regroupés en template stack, pare-feux managés et logs envoyés vers un collector group."></svg></div>
+      <div class="pn-legend" aria-hidden="true">
+        <span><i style="background:#00B8FF"></i>Device groups (politiques & objets)</span>
+        <span><i style="background:#FB923C"></i>Templates (réseau & device)</span>
+        <span><i style="background:#A78BFA"></i>Logs</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= CAS D'USAGE ================= -->
+<section id="usecases" style="padding-top:30px">
+  <div class="wrap">
+    <span class="kicker" data-reveal>Cas d'usage clients</span>
+    <h2 data-reveal>Choisis la situation de ton client.</h2>
+    <p class="lead" data-reveal>Chaque parcours enchaîne les bons modules dans le bon ordre. Les valeurs saisies (IP de Panorama, numéro de série, template, device group…) sont reprises d'une étape à l'autre, et tu exportes la CLI complète ou un rapport à la fin.</p>
+    <div class="grid g3 pk-grid" id="pk-grid"></div>
+  </div>
+</section>
+
+<!-- ================= CONCEPTS ================= -->
+<section id="concepts" style="padding-top:30px">
+  <div class="wrap">
+    <span class="kicker" data-reveal>Comprendre Panorama</span>
+    <h2 data-reveal>Les 4 concepts à maîtriser avant de configurer.</h2>
+    <div class="pn-tabs" role="tablist" aria-label="Concepts Panorama" data-reveal>
+      <button role="tab" id="t-tvd" aria-controls="c-tvd" aria-selected="true">🧩 Template vs Device Group</button>
+      <button role="tab" id="t-ord" aria-controls="c-ord" aria-selected="false" tabindex="-1">📜 Ordre des règles</button>
+      <button role="tab" id="t-hie" aria-controls="c-hie" aria-selected="false" tabindex="-1">🌳 Hiérarchie & héritage</button>
+      <button role="tab" id="t-cmt" aria-controls="c-cmt" aria-selected="false" tabindex="-1">🚀 Commit vs Push</button>
+    </div>
+
+    <!-- 1. Template vs DG -->
+    <div class="pn-panel" role="tabpanel" id="c-tvd" aria-labelledby="t-tvd">
+      <div class="pn-two">
+        <div class="pn-col tpl" id="col-tpl">
+          <h3><i>🧱</i>Template / Template stack</h3>
+          <p class="mut small">Onglets <b>Network</b> et <b>Device</b> : tout ce qui fait « tourner » le pare-feu. Plusieurs templates sont empilés dans un <b>template stack</b>, auquel on rattache les pare-feux.</p>
+          <ul><li>Interfaces, zones, virtual routers, VPN</li><li>DNS, NTP, fuseau, bannière, syslog</li><li>Administrateurs locaux, profils serveurs</li></ul>
+          <div class="drop" id="drop-tpl" aria-live="polite"></div>
+        </div>
+        <div class="pn-col dg" id="col-dg">
+          <h3><i>🗂️</i>Device group</h3>
+          <p class="mut small">Onglets <b>Policies</b> et <b>Objects</b> : ce que le pare-feu autorise ou bloque. Les device groups forment une <b>hiérarchie</b> sous <b>Shared</b> (jusqu'à 4 niveaux).</p>
+          <ul><li>Règles de sécurité, NAT, décryptage, PBF</li><li>Objets adresses, services, applications, tags</li><li>Profils de sécurité, log forwarding profiles</li></ul>
+          <div class="drop" id="drop-dg" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="pn-q">
+        <b>Mini-quiz : où se configure… ?</b> <span class="mut small">Clique un élément, il rejoint la bonne colonne.</span>
+        <div class="opts" id="quiz"></div>
+        <div class="pn-expl callout" id="quiz-expl">Un pare-feu managé reçoit <b>un</b> template stack et appartient à <b>un</b> device group : les deux sont indépendants et se combinent.</div>
+      </div>
+    </div>
+
+    <!-- 2. Ordre des règles -->
+    <div class="pn-panel" role="tabpanel" id="c-ord" aria-labelledby="t-ord" hidden>
+      <div class="pn-order">
+        <div style="position:relative">
+          <ul class="pn-rules" id="rules">
+            <li class="pre" data-i="0">Pre-rules Shared<small>Panorama</small></li>
+            <li class="pre" data-i="1">Pre-rules DG parent (DG-Europe)<small>Panorama</small></li>
+            <li class="pre" data-i="2">Pre-rules DG enfant (DG-Paris)<small>Panorama</small></li>
+            <li class="loc" data-i="3">Règles locales du pare-feu<small>Pare-feu</small></li>
+            <li class="post" data-i="4">Post-rules DG enfant (DG-Paris)<small>Panorama</small></li>
+            <li class="post" data-i="5">Post-rules DG parent (DG-Europe)<small>Panorama</small></li>
+            <li class="post" data-i="6">Post-rules Shared<small>Panorama</small></li>
+            <li class="def" data-i="7">Règles par défaut (intrazone / interzone)<small>Défaut</small></li>
+          </ul>
+          <span class="pn-pkt" id="pkt" aria-hidden="true"></span>
+        </div>
+        <div>
+          <h3>Du haut vers le bas, première règle qui matche</h3>
+          <p class="mut">Le pare-feu évalue un ensemble <b>unique</b> de règles : les pre-rules poussées par Panorama passent <b>avant</b> les règles locales, les post-rules <b>après</b>. Pour les pre-rules, Shared puis parent puis enfant ; pour les post-rules, l'ordre s'inverse (enfant, parent, Shared).</p>
+          <p class="mut small" style="margin-top:12px">1. Clique la couche qui contient la règle correspondant au flux. 2. Envoie un paquet.</p>
+          <div class="pn-ctrl" style="margin-top:12px"><button class="btn cy sm" id="send">▶ Envoyer un paquet</button></div>
+          <div class="callout pn-expl" id="ord-expl" aria-live="polite">Astuce : les <b>pre-rules</b> servent aux règles imposées (blocages globaux), les <b>post-rules</b> aux règles « filet » avant le deny par défaut. Un admin local ne peut pas modifier les règles poussées par Panorama.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Hiérarchie & héritage -->
+    <div class="pn-panel" role="tabpanel" id="c-hie" aria-labelledby="t-hie" hidden>
+      <div class="pn-two">
+        <div>
+          <h3>Device groups : l'héritage descend</h3>
+          <p class="mut small">Clique un niveau pour y créer l'objet <code>addr-DNS-Interne</code> : il est visible dans ce device group et <b>tous ses descendants</b>, jamais chez les parents ni les frères.</p>
+          <div class="pn-tree" id="tree" style="margin-top:16px"></div>
+          <div class="row" style="margin-top:14px;gap:16px">
+            <label class="row" style="margin:0;gap:6px;font-weight:650"><input type="checkbox" id="ovr"> DG-Paris fait un override</label>
+            <label class="row" style="margin:0;gap:6px;font-weight:650"><input type="checkbox" id="dis"> Disable override</label>
+          </div>
+          <div class="callout pn-expl" id="hie-expl" aria-live="polite"></div>
+        </div>
+        <div>
+          <h3>Template stack : le plus haut gagne</h3>
+          <p class="mut small">Pour chaque paramètre, le pare-feu reçoit la valeur du template <b>le plus haut</b> du stack qui la définit. Les <b>variables $</b> permettent ensuite une valeur différente par pare-feu.</p>
+          <div class="pn-stack" id="stack" style="margin-top:16px"></div>
+          <div class="pn-ctrl" style="margin-top:12px"><button class="btn sm" id="swap">⇅ Inverser l'ordre du stack</button></div>
+          <div class="pn-result" id="stack-res" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Commit vs Push -->
+    <div class="pn-panel" role="tabpanel" id="c-cmt" aria-labelledby="t-cmt" hidden>
+      <h3>Deux étapes : enregistrer sur Panorama, puis pousser</h3>
+      <p class="mut">Un <b>Commit to Panorama</b> valide la configuration candidate dans la running config de Panorama — rien ne change encore sur les pare-feux. Le <b>Push to Devices</b> envoie device groups et template stacks aux pare-feux choisis (portée « Edit Selections »). <b>Commit and Push</b> enchaîne les deux.</p>
+      <div class="pn-flow" aria-live="polite">
+        <div class="pn-box" id="bx-cand"><span class="bi">✏️</span><b>Config candidate</b><small>Panorama</small><span class="st" id="st-cand">à jour</span></div>
+        <div class="pn-arrow" id="ar1"><i></i></div>
+        <div class="pn-box" id="bx-run"><span class="bi">🛰️</span><b>Running config</b><small>Panorama</small><span class="st okk" id="st-run">v1</span></div>
+        <div class="pn-arrow" id="ar2"><i></i></div>
+        <div class="pn-box" id="bx-fw"><span class="bi">🧱</span><b>Pare-feux managés</b><small>DG-Paris · TS-Paris</small><span class="st okk" id="st-fw">In sync</span></div>
+      </div>
+      <div class="pn-ctrl">
+        <button class="btn sm" id="b-edit">✏️ Modifier une règle</button>
+        <button class="btn sm" id="b-commit">Commit to Panorama</button>
+        <button class="btn sm" id="b-push">Push to Devices</button>
+        <button class="btn cy sm" id="b-cp">Commit and Push</button>
+        <button class="btn ghost sm" id="b-rst">↺</button>
+      </div>
+      <div class="pn-log" id="cmt-log">Panorama > Commit : commence par modifier une règle.</div>
+      <div class="callout warn" style="margin-top:14px"><b>Piège classique</b>Un pare-feu « Out of Sync » dans Panorama &gt; Managed Devices &gt; Summary signifie que la config de Panorama n'a pas encore été poussée. En CLI : <code>commit</code> puis <code>commit-all shared-policy device-group DG-Paris</code> / <code>commit-all template-stack name TS-Paris</code>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MODULES ================= -->
+<section id="modules" style="padding-top:30px">
+  <div class="wrap">
+    <span class="kicker" data-reveal>Tous les modules Panorama</span>
+    <h2 data-reveal>Configure un élément précis</h2>
+    <div id="dash"></div>
+  </div>
+</section>
+</div>
+
+<div id="site-foot"></div>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/engine.js"></script>
+<script src="../assets/js/panorama/p01-p03.js"></script>
+<script src="../assets/js/panorama/p04-p06.js"></script>
+<script src="../assets/js/panorama/p07-p10.js"></script>
+<script src="../assets/js/panorama/scenarios.js"></script>
+<script>
+(function () {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = matchMedia("(pointer: fine)").matches;
+  const esc = s => PAN.esc(s);
+  const $ = id => document.getElementById(id);
+  const C = PAN.cfg || { list: [], get: () => null, MODNAMES: {} };
+  const CFG = "panorama-configurateur.html";
+
+  /* ================= scène hiérarchie ================= */
+  const N = [
+    { x: 150, y: 112, w: 124, h: 38, t: "Shared", s: "objets & règles communs", k: "dg" },
+    { x: 150, y: 186, w: 124, h: 38, t: "DG-Europe", s: "device group parent", k: "dg" },
+    { x: 80, y: 262, w: 112, h: 36, t: "DG-Paris", s: "enfant", k: "dg" },
+    { x: 220, y: 262, w: 112, h: 36, t: "DG-Lyon", s: "enfant", k: "dg" },
+    { x: 430, y: 112, w: 112, h: 38, t: "T-Global", s: "DNS · NTP · admins", k: "tp" },
+    { x: 565, y: 112, w: 112, h: 38, t: "T-Paris", s: "interfaces · zones", k: "tp" },
+    { x: 70, y: 370, w: 104, h: 40, t: "FW-PAR-01", s: "PA-440", k: "fw" },
+    { x: 200, y: 370, w: 104, h: 40, t: "FW-PAR-02", s: "PA-440", k: "fw" },
+    { x: 330, y: 370, w: 104, h: 40, t: "FW-LYON-01", s: "PA-820", k: "fw" },
+    { x: 440, y: 478, w: 112, h: 38, t: "Log Collector", s: "LC-01", k: "lc" },
+    { x: 575, y: 478, w: 112, h: 38, t: "Log Collector", s: "LC-02", k: "lc" },
+  ];
+  const COL = { dg: "#00B8FF", tp: "#FB923C", fw: "#FA582D", lc: "#A78BFA" };
+  const L = [
+    ["M280 58 C280 80,150 80,150 93", "dg"], ["M150 131 V167", "dg"],
+    ["M150 205 C150 230,80 222,80 244", "dg"], ["M150 205 C150 230,220 222,220 244", "dg"],
+    ["M80 280 C80 320,70 320,70 350", "dg"], ["M80 280 C80 320,200 320,200 350", "dg"], ["M220 280 C220 320,330 320,330 350", "dg"],
+    ["M360 58 C360 80,430 80,430 93", "tp"], ["M392 58 C420 80,565 70,565 93", "tp"],
+    ["M430 131 C430 160,480 160,480 177", "tp"], ["M565 131 C565 160,515 160,515 177", "tp"],
+    ["M497 224 C497 300,90 300,90 350", "tp", 1], ["M497 224 C497 300,220 300,220 350", "tp", 1], ["M497 224 C497 300,350 300,350 350", "tp", 1],
+    ["M70 390 C70 470,300 480,384 478", "lc", 1], ["M200 390 C200 455,320 470,384 474", "lc", 1], ["M330 390 C330 440,360 466,384 470", "lc", 1],
+  ];
+  const CH = [
+    ["M280 58 C280 80,150 80,150 93 V167 V205 C150 230,80 222,80 244 V280 C80 320,70 320,70 350", "#8BDCFF", 0],
+    ["M280 58 C280 80,150 80,150 93 V167 V205 C150 230,220 222,220 244 V280 C220 320,330 320,330 350", "#8BDCFF", 1.4],
+    ["M360 58 C360 80,430 80,430 93 V131 C430 160,480 160,480 177 L497 224 C497 300,220 300,220 350", "#FDBA74", .7],
+    ["M392 58 C420 80,565 70,565 93 V131 C565 160,515 160,515 177 L497 224 C497 300,90 300,90 350", "#FDBA74", 2.1],
+    ["M70 390 C70 470,300 480,384 478", "#C4B5FD", 1.1], ["M200 390 C200 455,320 470,384 474", "#C4B5FD", 1.8], ["M330 390 C330 440,360 466,384 470", "#C4B5FD", 2.5],
+  ];
+  let h = `<defs><linearGradient id="pn-g" x1="0" x2="1"><stop offset="0" stop-color="#5B7CFF"/><stop offset="1" stop-color="#8BDCFF"/></linearGradient>
+    <pattern id="pn-grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="rgba(255,255,255,.045)"/></pattern></defs>
+    <g class="ly" data-d="4"><rect x="-40" y="-40" width="720" height="600" fill="url(#pn-grid)"/>
+      <rect x="10" y="80" width="290" height="210" rx="18" fill="rgba(0,184,255,.035)" stroke="rgba(0,184,255,.25)" stroke-dasharray="4 6"/>
+      <text class="t-c" x="14" y="72" style="fill:#00B8FF">DEVICE GROUPS</text>
+      <rect x="360" y="80" width="270" height="170" rx="18" fill="rgba(251,146,60,.035)" stroke="rgba(251,146,60,.25)" stroke-dasharray="4 6"/>
+      <text class="t-c" x="620" y="243" text-anchor="end" style="fill:#FB923C">TEMPLATES</text>
+      <rect x="374" y="444" width="262" height="70" rx="16" fill="rgba(167,139,250,.04)" stroke="rgba(167,139,250,.35)" stroke-dasharray="4 6"/>
+      <text class="t-c" x="505" y="438" text-anchor="middle" style="fill:#A78BFA">COLLECTOR GROUP CG-EU</text></g>
+    <g class="ly" data-d="9">${L.map((l, i) => `<path class="ln" style="animation-delay:${.3 + i * .07}s" d="${l[0]}" fill="none" stroke="${COL[l[1]]}" stroke-opacity="${l[2] ? .38 : .6}" stroke-width="2"${l[2] ? ' stroke-dasharray="4 6"' : ""}/>`).join("")}</g>
+    <g class="ly" data-d="16">
+      <g class="nd"><rect x="225" y="12" width="190" height="46" rx="14" fill="url(#pn-g)" opacity=".3" class="glow" style="filter:blur(8px)"/>
+        <rect x="225" y="12" width="190" height="46" rx="14" fill="#0B1224" stroke="url(#pn-g)" stroke-width="2.4"/>
+        <g fill="none" stroke="#8BDCFF" stroke-width="2" stroke-linejoin="round"><path d="m258 24 14 6-14 6-14-6z"/><path d="m244 37 14 6 14-6"/></g>
+        <text x="336" y="34" text-anchor="middle" style="font:900 13px var(--font);letter-spacing:.14em;fill:#fff">PANORAMA</text>
+        <text class="t-s" x="336" y="48" text-anchor="middle" style="fill:#8BDCFF">11.1 · M-300 / VM</text></g>
+      <g class="nd" style="animation-delay:.9s">
+        <rect x="435" y="186" width="140" height="44" rx="12" fill="#0B1224" stroke="#FB923C" stroke-opacity=".35"/>
+        <rect x="431" y="181" width="140" height="44" rx="12" fill="#0B1224" stroke="#FB923C" stroke-opacity=".6"/>
+        <rect x="427" y="177" width="140" height="44" rx="12" fill="#0B1224" stroke="#FB923C" stroke-width="2"/>
+        <text x="497" y="196" text-anchor="middle">Template stack</text><text class="t-s" x="497" y="211" text-anchor="middle">TS-Paris = T-Paris › T-Global</text></g>
+      ${N.map((n, i) => `<g class="nd" style="animation-delay:${.2 + i * .08}s">
+        <rect x="${n.x - n.w / 2}" y="${n.y - n.h / 2}" width="${n.w}" height="${n.h}" rx="11" fill="#0B1224" stroke="${COL[n.k]}" stroke-width="${n.k === "fw" ? 2.2 : 1.8}"${n.k === "fw" ? "" : ' stroke-opacity=".85"'}/>
+        ${n.k === "fw" ? `<circle cx="${n.x + n.w / 2 - 10}" cy="${n.y - n.h / 2 + 9}" r="3" fill="#22C55E" class="glow" style="animation-delay:${i * .3}s"/>` : ""}
+        <text x="${n.x}" y="${n.y - 1}" text-anchor="middle">${n.t}</text><text class="t-s" x="${n.x}" y="${n.y + 12}" text-anchor="middle">${n.s}</text></g>`).join("")}
+    </g>`;
+  if (!reduce) h += `<g>${CH.map(c => `<circle r="4.5" fill="${c[1]}" visibility="hidden" style="filter:drop-shadow(0 0 6px ${c[1]})"><set attributeName="visibility" to="visible" begin="${1.8 + c[2]}s"/><animateMotion dur="${c[1] === "#C4B5FD" ? 2.2 : 3.6}s" begin="${1.8 + c[2]}s" repeatCount="indefinite" path="${c[0]}"/></circle>`).join("")}</g>`;
+  $("scene").innerHTML = h;
+  if (!reduce) {
+    const hero = $("hero"), layers = $("scene").querySelectorAll(".ly"), aur = $("aurora");
+    if (fine) hero.addEventListener("pointermove", e => {
+      const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+      layers.forEach(l => { l.style.transform = `translate(${-x * l.dataset.d}px,${-y * l.dataset.d}px)`; });
+    });
+    let tk = false;
+    addEventListener("scroll", () => { if (tk) return; tk = true; requestAnimationFrame(() => { tk = false; if (scrollY < innerHeight * 1.2) aur.style.transform = `translateY(${scrollY * .35}px)`; }); }, { passive: true });
+  }
+
+  /* ================= cas d'usage ================= */
+  let S = C.scenarios || C.scenarioList || [];
+  if (typeof S === "function") { try { S = S(); } catch (e) { S = []; } }
+  if (S && !Array.isArray(S)) S = Object.values(S);
+  S = (S || []).filter(s => s && s.id && Array.isArray(s.steps));
+  if (!S.length) S = PAN.panoramaScenarios || [];
+  const scLink = s => `${CFG}#parcours=${encodeURIComponent(s.id)}`;
+  $("pk-grid").innerHTML = S.length ? S.map((s, i) => `
+    <a class="card hover pk-card" href="${scLink(s)}" data-reveal data-delay="${(i % 3) * 90}">
+      <span class="spot"></span>
+      <div class="pk-top"><div class="ico">${s.icon || "🧭"}</div>
+        <div class="pk-meta">${s.level ? `<span class="badge or">${esc(s.level)}</span>` : ""}${s.duration ? `<span class="badge">⏱ ${esc(s.duration)}</span>` : ""}</div></div>
+      <h3>${esc(s.title)}</h3><p class="mut small">${esc(s.desc || "")}</p>
+      <ol class="pk-steps">${s.steps.map(id => { const d = C.get && C.get(id); return `<li>${d ? (d.icon || "⚙️") + " " + esc(d.title) : esc(id)}</li>`; }).join("")}</ol>
+      <span class="pk-go">Démarrer · ${s.steps.length} étape${s.steps.length > 1 ? "s" : ""} →</span>
+    </a>`).join("") : `<div class="pn-empty">Les parcours guidés arrivent bientôt.</div>`;
+
+  /* ================= onglets ================= */
+  const tabs = [...document.querySelectorAll('.pn-tabs [role="tab"]')];
+  const sel = t => {
+    tabs.forEach(b => { const on = b === t; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; $(b.getAttribute("aria-controls")).hidden = !on; });
+    if (t.id === "t-ord") placePkt(-1);
+  };
+  tabs.forEach((b, i) => {
+    b.addEventListener("click", () => sel(b));
+    b.addEventListener("keydown", e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const n = tabs[(i + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length]; n.focus(); sel(n);
+    });
+  });
+
+  /* ---- 1. quiz Template vs DG ---- */
+  const Q = [
+    ["Zone « trust »", "tpl", "Les zones sont dans Network > Zones : c'est un réglage réseau, donc dans un template."],
+    ["Règle de sécurité", "dg", "Policies > Security : les règles (pre ou post) vivent dans un device group ou dans Shared."],
+    ["Serveur NTP", "tpl", "Device > Setup > Services : paramètre système, donc template (souvent un template commun « Global »)."],
+    ["Objet adresse", "dg", "Objects > Addresses : objet de device group (ou Shared pour le rendre visible partout)."],
+    ["Interface ethernet1/1", "tpl", "Network > Interfaces : template. Utilise une variable $ si l'IP change d'un site à l'autre."],
+    ["Profil antivirus", "dg", "Objects > Security Profiles : objet de device group, référencé par les règles."],
+    ["Virtual router", "tpl", "Network > Virtual Routers : template."],
+    ["Log forwarding profile", "dg", "Objects > Log Forwarding : objet de device group, à attacher aux règles de sécurité."],
+    ["Profil serveur syslog", "tpl", "Device > Server Profiles > Syslog côté pare-feu : template. (Côté Panorama lui-même : onglet Panorama.)"],
+    ["Règle NAT", "dg", "Policies > NAT : device group, pre ou post-rule."],
+  ];
+  const quiz = $("quiz"), qe = $("quiz-expl");
+  quiz.innerHTML = Q.map((q, i) => `<button type="button" data-i="${i}">${esc(q[0])}</button>`).join("");
+  quiz.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b || b.classList.contains("ok")) return;
+    const q = Q[+b.dataset.i], col = $(q[1] === "tpl" ? "col-tpl" : "col-dg");
+    b.classList.add("ok"); b.disabled = true;
+    $(q[1] === "tpl" ? "drop-tpl" : "drop-dg").insertAdjacentHTML("beforeend", `<span>${esc(q[0])}</span>`);
+    document.querySelectorAll(".pn-col").forEach(c => c.classList.toggle("hit", c === col));
+    qe.className = "pn-expl callout " + (q[1] === "tpl" ? "or" : "");
+    qe.innerHTML = `<b>${esc(q[0])} → ${q[1] === "tpl" ? "Template" : "Device group"}</b>${esc(q[2])}`;
+  });
+
+  /* ---- 2. ordre des règles ---- */
+  const rules = [...document.querySelectorAll("#rules li")], pkt = $("pkt"), oe = $("ord-expl");
+  let pick = 3, busy = false;
+  const mark = () => rules.forEach((r, i) => r.classList.toggle("pick", i === pick));
+  function placePkt(i) {
+    if (i < 0) { pkt.classList.remove("on"); return; }
+    const r = rules[i]; pkt.style.top = (r.offsetTop + r.offsetHeight / 2 - 9) + "px"; pkt.classList.add("on");
+  }
+  mark();
+  rules.forEach((r, i) => r.addEventListener("click", () => { if (busy) return; pick = i; rules.forEach(x => x.classList.remove("match", "skip", "scan")); mark(); placePkt(-1); }));
+  const MSG = [
+    "Bloqué ou autorisé dès la pre-rule Shared : idéal pour une politique imposée à toute la flotte (ex. blocage de pays, de catégories URL).",
+    "Match dans la pre-rule du DG parent : la règle s'applique à tous les sites européens, avant toute règle plus spécifique.",
+    "Match dans la pre-rule du DG enfant : spécifique à Paris, mais toujours prioritaire sur les règles locales.",
+    "Match dans une règle locale du pare-feu : elle n'est évaluée qu'après toutes les pre-rules de Panorama.",
+    "Match dans une post-rule du DG enfant : évaluée après les règles locales.",
+    "Match dans une post-rule du DG parent.",
+    "Match dans une post-rule Shared : typiquement une règle de deny explicite journalisée avant les règles par défaut.",
+    "Aucune règle ne matche : les règles par défaut s'appliquent (intrazone autorisé, interzone refusé). Pense à surcharger leur journalisation !",
+  ];
+  $("send").addEventListener("click", () => {
+    if (busy) return; busy = true;
+    rules.forEach(x => x.classList.remove("match", "skip", "scan"));
+    let i = 0;
+    const step = () => {
+      placePkt(i); rules[i].classList.add("scan");
+      setTimeout(() => {
+        rules[i].classList.remove("scan");
+        if (i === pick) {
+          rules[i].classList.add("match");
+          rules.forEach((x, j) => { if (j > i) x.classList.add("skip"); });
+          oe.className = "callout ok pn-expl"; oe.innerHTML = `<b>Règle trouvée à l'étape ${i + 1}/8</b>${esc(MSG[i])} Les couches suivantes ne sont pas évaluées.`;
+          busy = false; return;
+        }
+        i++; step();
+      }, reduce ? 60 : 480);
+    };
+    step();
+  });
+  addEventListener("resize", () => { if (pkt.classList.contains("on")) { const m = rules.findIndex(r => r.classList.contains("match")); if (m >= 0) placePkt(m); } });
+
+  /* ---- 3. hiérarchie ---- */
+  const T = [
+    { id: "sh", n: "Shared", s: "racine", p: null }, { id: "eu", n: "DG-Europe", s: "niveau 1", p: "sh" },
+    { id: "fr", n: "DG-France", s: "niveau 2", p: "eu" }, { id: "es", n: "DG-Espagne", s: "niveau 2", p: "eu" },
+    { id: "pa", n: "DG-Paris", s: "niveau 3", p: "fr" }, { id: "ly", n: "DG-Lyon", s: "niveau 3", p: "fr" }, { id: "md", n: "DG-Madrid", s: "niveau 3", p: "es" },
+  ];
+  const LV = [["sh"], ["eu"], ["fr", "es"], ["pa", "ly", "md"]];
+  const byT = Object.fromEntries(T.map(t => [t.id, t]));
+  const anc = (id, a) => { for (let x = byT[id].p; x; x = byT[x].p) if (x === a) return true; return false; };
+  $("tree").innerHTML = LV.map((lv, i) => (i ? '<div class="arr" aria-hidden="true">▼</div>' : "") + `<div class="lvl">${lv.map(id => `<button type="button" class="pn-node" data-id="${id}">${byT[id].n}<small>${byT[id].s}</small></button>`).join("")}</div>`).join("")
+    + '<div class="arr" aria-hidden="true">▼</div><div class="lvl"><span class="pn-node fw" data-fw="pa">FW Paris<small>pare-feu</small></span><span class="pn-node fw" data-fw="ly">FW Lyon<small>pare-feu</small></span><span class="pn-node fw" data-fw="md">FW Madrid<small>pare-feu</small></span></div>';
+  let own = "eu";
+  const hie = () => {
+    const ov = $("ovr").checked, dis = $("dis").checked;
+    document.querySelectorAll("#tree .pn-node").forEach(el => {
+      const id = el.dataset.id || el.dataset.fw, isFw = !!el.dataset.fw;
+      const sees = id === own || anc(id, own);
+      el.classList.remove("own", "inh", "no", "ovr");
+      if (!isFw && id === own) el.classList.add("own");
+      else if (sees) { el.classList.add("inh"); if (ov && !dis && id === "pa" && own !== "pa") el.classList.add("ovr"); }
+      else el.classList.add("no");
+    });
+    const paSees = own === "pa" || anc("pa", own);
+    let m = `<b>Objet créé dans ${byT[own].n}</b>Visible dans ${T.filter(t => t.id !== own && anc(t.id, own)).map(t => t.n).join(", ") || "aucun device group descendant"} et poussé sur les pare-feux concernés. `;
+    if (ov && paSees && own !== "pa") m += dis ? "« Disable override » est coché : DG-Paris ne peut pas modifier la valeur héritée." : "DG-Paris a surchargé la valeur (bouton Override) : seuls Paris et ses descendants voient la nouvelle valeur ; « Revert » la rétablit.";
+    else if (ov && !paSees) m += "DG-Paris n'hérite pas de cet objet : rien à surcharger.";
+    m += " Un administrateur local du pare-feu ne peut jamais modifier un objet poussé par Panorama.";
+    $("hie-expl").innerHTML = m;
+  };
+  $("tree").addEventListener("click", e => { const b = e.target.closest("button.pn-node"); if (b) { own = b.dataset.id; hie(); } });
+  $("ovr").addEventListener("change", hie); $("dis").addEventListener("change", hie);
+  hie();
+
+  let ST = [
+    { n: "T-Paris", v: { "NTP primaire": "10.1.1.1", "Interface ethernet1/1": "$ip-wan" } },
+    { n: "T-Global", v: { "NTP primaire": "pool.ntp.org", "DNS primaire": "8.8.8.8", "Fuseau horaire": "Europe/Paris" } },
+  ];
+  const stackR = () => {
+    $("stack").innerHTML = ST.map((t, i) => `<div class="tl${i === 0 ? " win" : ""}"><span class="rk">${i + 1}</span>${t.n}<code>${Object.entries(t.v).map(([k, v]) => k.split(" ")[0] + "=" + v).join(" · ")}</code></div>`).join("")
+      + `<div class="tl" style="border-color:var(--line);background:rgba(0,0,0,.2);color:var(--mut)"><span class="rk" style="border-color:var(--line2)">▾</span>Pare-feu FW-PAR-01 <code style="color:var(--mut)">variable $ip-wan = 203.0.113.10/29</code></div>`;
+    const keys = [...new Set(ST.flatMap(t => Object.keys(t.v)))];
+    $("stack-res").innerHTML = keys.map(k => { const t = ST.find(x => k in x.v); let v = t.v[k]; if (v === "$ip-wan") v = "203.0.113.10/29 (variable)"; return `${esc(k)} = <b>${esc(v)}</b> <span style="color:var(--mut2)">← ${t.n}</span>`; }).join("<br>");
+  };
+  $("swap").addEventListener("click", () => {
+    const els = [...$("stack").children].slice(0, 2);
+    if (!reduce && els.length === 2) { const d = els[1].offsetTop - els[0].offsetTop; els[0].style.transform = `translateY(${d}px)`; els[1].style.transform = `translateY(${-d}px)`; setTimeout(() => { ST.reverse(); stackR(); }, 450); }
+    else { ST.reverse(); stackR(); }
+  });
+  stackR();
+
+  /* ---- 4. commit vs push ---- */
+  const cs = { cand: 0, run: 1, fw: 1, edits: 0 };
+  const lg = $("cmt-log");
+  const setSt = (id, txt, cls) => { const e = $(id); e.textContent = txt; e.className = "st " + cls; };
+  const flash = id => { const b = $(id); b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 900); };
+  const run = id => { const a = $(id); a.classList.remove("go"); void a.offsetWidth; a.classList.add("go"); };
+  const draw = () => {
+    setSt("st-cand", cs.cand ? `${cs.cand} modif. en attente` : "à jour", cs.cand ? "pend" : "");
+    setSt("st-run", "v" + cs.run, "okk");
+    setSt("st-fw", cs.fw === cs.run ? "In sync" : "Out of sync", cs.fw === cs.run ? "okk" : "oos");
+  };
+  const say = t => { lg.textContent = t; };
+  const doCommit = () => {
+    if (!cs.cand) { say("Rien à committer : la configuration candidate est identique à la running config."); return false; }
+    cs.run++; cs.cand = 0; run("ar1"); setTimeout(() => { flash("bx-run"); draw(); }, reduce ? 0 : 700);
+    say(`Commit to Panorama → OK (running config v${cs.run}).\nLes pare-feux ne sont pas encore modifiés : Managed Devices affiche « Out of sync ».`); return true;
+  };
+  const doPush = (after) => {
+    if (cs.fw === cs.run) { say(cs.cand ? "Push impossible à ce stade : les modifications ne sont pas committées sur Panorama (Push to Devices envoie la running config, pas la candidate)." : "Les pare-feux sont déjà synchronisés."); return; }
+    run("ar2"); setTimeout(() => { cs.fw = cs.run; flash("bx-fw"); draw(); }, reduce ? 0 : 700);
+    say((after ? lg.textContent + "\n" : "") + `Push to Devices → DG-Paris + TS-Paris sur FW-PAR-01, FW-PAR-02 : job terminé, pare-feux « In sync » (v${cs.run}).`);
+  };
+  $("b-edit").addEventListener("click", () => { cs.cand++; cs.edits++; flash("bx-cand"); draw(); say(`Policies > Security (Device Group : DG-Paris) > Pre Rules : règle modifiée.\nLe bouton Commit signale ${cs.cand} changement(s) dans la configuration candidate.`); });
+  $("b-commit").addEventListener("click", doCommit);
+  $("b-push").addEventListener("click", () => doPush(false));
+  $("b-cp").addEventListener("click", () => { if (doCommit()) setTimeout(() => doPush(true), reduce ? 0 : 800); else doPush(false); });
+  $("b-rst").addEventListener("click", () => { Object.assign(cs, { cand: 0, run: 1, fw: 1, edits: 0 }); draw(); say("Panorama > Commit : commence par modifier une règle."); });
+  draw();
+
+  /* ================= grille des modules ================= */
+  const FALLBACK = { P01: "Mise en service Panorama", P02: "Ajout de pare-feux", P03: "Templates", P04: "Device groups", P05: "Collecte & transfert de logs", P06: "Utilisation des logs", P07: "Comptes administrateurs", P08: "Rapports", P09: "Dépannage", P10: "Avancé" };
+  const name = m => (C.MODNAMES && C.MODNAMES[m]) || FALLBACK[m] || m;
+  const mods = (C.list || []).filter(d => /^P\d/.test(d.module || "") || /^p\d/.test(d.id || ""));
+  const groups = {};
+  mods.forEach(d => (groups[d.module] = groups[d.module] || []).push(d));
+  const sortM = (a, b) => a.localeCompare(b, "fr", { numeric: true });
+  $("dash").innerHTML = mods.length ? Object.keys(groups).sort(sortM).map(m => `
+    <div class="pn-cat" data-reveal><b>${esc(m)}</b><span>${esc(name(m))}</span><em>${groups[m].length} module${groups[m].length > 1 ? "s" : ""}</em></div>
+    <div class="grid g4">${groups[m].map((d, i) => `
+      <a class="card hover mcard" href="${CFG}#${encodeURIComponent(d.id)}" data-reveal data-delay="${(i % 4) * 60}">
+        <span class="spot"></span><div class="ico">${d.icon || "⚙️"}</div><h3>${esc(d.title)}</h3><p class="mut">${esc(d.desc || "")}</p></a>`).join("")}</div>`).join("")
+    : `<div class="pn-empty">Modules Panorama en cours de chargement… <a href="${CFG}">Ouvrir le configurateur</a></div>`;
+  PAN.reveal && PAN.reveal();
+
+  /* ================= recherche ================= */
+  const hs = $("hs"), sug = $("hsug");
+  let si = 0;
+  const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const tagStr = t => Array.isArray(t) ? t.join(" ") : (t || "");
+  function render() {
+    const f = norm(hs.value.trim());
+    const words = f.split(/\s+/).filter(Boolean);
+    const ok = txt => { const n = norm(txt); return words.every(w => n.includes(w)); };
+    const hitsS = f ? S.filter(s => ok(s.title + " " + (s.desc || "") + " " + tagStr(s.tags))).slice(0, 3) : [];
+    const hitsM = f ? mods.filter(d => ok(d.title + " " + d.module + " " + name(d.module) + " " + (d.desc || "") + " " + tagStr(d.tags))).slice(0, 8) : [];
+    si = 0;
+    const items = hitsS.map(s => `<a href="${scLink(s)}" role="option"><span class="pk">${s.icon || "🧭"}</span> ${esc(s.title)}<small>Parcours</small></a>`)
+      .concat(hitsM.map(d => `<a href="${CFG}#${encodeURIComponent(d.id)}" role="option">${d.icon || "⚙️"} ${esc(d.title)}<small>${esc(d.module)}</small></a>`));
+    sug.innerHTML = items.join("") || (f ? `<a href="${CFG}" role="option">Aucun résultat — voir tous les modules</a>` : "");
+    const a = sug.querySelector("a"); if (a) a.classList.add("sel");
+    sug.classList.toggle("show", !!f); hs.setAttribute("aria-expanded", !!f);
+  }
+  hs.addEventListener("input", render);
+  hs.addEventListener("keydown", e => {
+    const items = sug.querySelectorAll("a");
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); if (!items.length) return;
+      si = (si + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((a, i) => a.classList.toggle("sel", i === si));
+    } else if (e.key === "Enter" && items[si]) location.href = items[si].href;
+    else if (e.key === "Escape") { sug.classList.remove("show"); hs.setAttribute("aria-expanded", false); }
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".pn-search")) sug.classList.remove("show"); });
+})();
+</script>
+</body>
+</html>

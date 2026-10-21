@@ -1,0 +1,196 @@
+/* ==========================================================
+   PANW Config Builder — styles du hub (index.html) + éléments
+   partagés des pages d'accueil produit (cartes de parcours, compteurs…)
+   ========================================================== */
+:root{--cy:#00B8FF;--cy2:#8BDCFF;--cy-glow:rgba(0,184,255,.45)}
+
+/* ---------- aurora / parallax background ---------- */
+.hub-aurora{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1}
+.hub-aurora i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;will-change:transform}
+.hub-aurora i:nth-child(1){width:520px;height:520px;left:-140px;top:-60px;background:radial-gradient(circle,rgba(250,88,45,.55),transparent 65%);animation:aur1 16s ease-in-out infinite}
+.hub-aurora i:nth-child(2){width:600px;height:600px;right:-180px;top:40px;background:radial-gradient(circle,rgba(0,184,255,.45),transparent 65%);animation:aur2 19s ease-in-out infinite}
+.hub-aurora i:nth-child(3){width:380px;height:380px;left:40%;bottom:-160px;background:radial-gradient(circle,rgba(167,139,250,.35),transparent 65%);animation:aur1 22s ease-in-out infinite reverse}
+@keyframes aur1{50%{transform:translate(60px,40px) scale(1.12)}}
+@keyframes aur2{50%{transform:translate(-70px,50px) scale(.92)}}
+
+/* ---------- hero ---------- */
+.hub-hero{position:relative;padding:70px 0 40px;isolation:isolate}
+.hub-hero .wrap{display:grid;grid-template-columns:1fr 1.05fr;gap:40px;align-items:center}
+.hub-hero h1{margin:16px 0 18px}
+.hub-hero h1 .l{display:block;overflow:hidden;padding-bottom:.08em}
+.hub-hero h1 .l>span{display:inline-block;animation:hubLine .9s var(--ease) both}
+.hub-hero h1 .l:nth-child(2)>span{animation-delay:.12s}
+.hub-hero h1 .l:nth-child(3)>span{animation-delay:.24s}
+@keyframes hubLine{from{transform:translateY(105%);opacity:0}}
+.hub-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+.hub-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn.cy{background:linear-gradient(135deg,#5B7CFF,var(--cy));border-color:transparent;box-shadow:0 14px 40px -14px var(--cy-glow);color:#fff}
+.btn.cy:hover{border-color:transparent;box-shadow:0 18px 50px -12px var(--cy-glow)}
+.badge.cy{color:#9FE8FF;border-color:rgba(0,184,255,.45);background:rgba(0,184,255,.1)}
+.kicker.cy{color:var(--cy2)}
+.grad-cy{background:linear-gradient(90deg,#0EA5E9,var(--cy) 55%,#9FE8FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- scène SVG (architecture) ---------- */
+.hub-scene{position:relative;width:100%;aspect-ratio:640/520}
+.hub-scene svg{width:100%;height:100%;overflow:visible;display:block}
+.hub-scene .ly{transition:transform .5s cubic-bezier(.2,.7,.2,1);will-change:transform}
+.hub-scene text{font:700 12px var(--font);fill:#CBD5E1}
+.hub-scene .t-s{font:600 10px var(--mono);fill:#64748B}
+.hub-scene .t-h{font:900 13px var(--font);letter-spacing:.14em;fill:#fff}
+.hub-scene .pill text{font:800 10px var(--font);letter-spacing:.06em;fill:#1a0802}
+.hub-scene .pill.cyp text{fill:#03161d}
+.hub-scene .ring{transform-box:fill-box;transform-origin:center;animation:spin 26s linear infinite}
+.hub-scene .ring.r2{animation-duration:40s;animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hub-scene .led{animation:led 1.6s ease-in-out infinite}
+@keyframes led{50%{opacity:.25}}
+.hub-scene .pop{transform-box:fill-box;transform-origin:center;animation:pop .7s var(--ease) both}
+@keyframes pop{from{transform:scale(.4);opacity:0}}
+.hub-scene .draw{stroke-dasharray:600;stroke-dashoffset:600;animation:drawIn 1.6s var(--ease) forwards}
+@keyframes drawIn{to{stroke-dashoffset:0}}
+.hub-scene .bob{animation:bob 6s ease-in-out infinite}
+.hub-scene .bob.b2{animation-delay:-3s}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.hub-legend{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:6px}
+.hub-legend i{display:inline-block;width:22px;height:4px;border-radius:4px;vertical-align:middle;margin-right:6px}
+
+/* ---------- marquee ---------- */
+.hub-marquee{overflow:hidden;padding:18px 0;border-block:1px solid var(--line);background:rgba(255,255,255,.02);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.hub-marquee .trk{display:flex;gap:10px;width:max-content;animation:marq 70s linear infinite}
+.hub-marquee .trk.rev{animation-direction:reverse;margin-top:10px;animation-duration:85s}
+.hub-marquee:hover .trk{animation-play-state:paused}
+.hub-marquee a{white-space:nowrap;font-size:13px;font-weight:650;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--tx2);transition:.2s}
+.hub-marquee a:hover{text-decoration:none;color:#fff}
+.hub-marquee .o a:hover{border-color:var(--or)} .hub-marquee .c a:hover{border-color:var(--cy)}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+/* ---------- cartes produit (tilt 3D) ---------- */
+.prod-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px;perspective:1400px}
+.prod{--acc:var(--or);--acc2:var(--or2);--glow:var(--or-glow);--rx:0deg;--ry:0deg;--gx:50%;--gy:50%;
+  position:relative;border-radius:26px;padding:30px;border:1px solid var(--line2);
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015));
+  transform:rotateX(var(--rx)) rotateY(var(--ry));transform-style:preserve-3d;transition:transform .5s var(--ease),box-shadow .4s,border-color .4s;overflow:hidden;color:var(--tx)}
+.prod.cyan{--acc:#00B8FF;--acc2:var(--cy2);--glow:var(--cy-glow)}
+.prod.tilting{transition:transform .08s linear,box-shadow .4s,border-color .4s}
+.prod:hover{border-color:var(--acc);box-shadow:0 40px 90px -40px var(--glow)}
+.prod::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(500px circle at var(--gx) var(--gy),color-mix(in srgb,var(--acc) 22%,transparent),transparent 55%)}
+.prod:hover::before{opacity:1}
+.prod>*{position:relative;transform:translateZ(30px)}
+.prod .p-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.prod .p-ico{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 14px 34px -12px var(--glow);flex:none;transform:translateZ(60px)}
+.prod .p-ico svg{width:32px;height:32px}
+.prod h3{font-size:26px;margin:0}
+.prod .p-sub{font:700 12px var(--mono);color:var(--acc2);letter-spacing:.08em}
+.prod .p-art{height:150px;margin:6px -6px 14px;transform:translateZ(45px)}
+.prod .p-art svg{width:100%;height:100%}
+.prod ul{list-style:none;display:grid;gap:7px;margin:14px 0 22px;font-size:14px;color:var(--tx2)}
+.prod li{display:flex;gap:10px;align-items:flex-start}
+.prod li::before{content:"";flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--acc2);box-shadow:0 0 10px var(--acc)}
+.prod .p-num{display:flex;gap:22px;margin:4px 0 4px}
+.prod .p-num b{display:block;font-size:30px;font-weight:900;line-height:1;color:#fff}
+.prod .p-num span{font-size:12px;color:var(--mut)}
+.prod .p-cta{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- comment ça marche ---------- */
+.how{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:38px}
+.how-line{position:absolute;left:8%;right:8%;top:38px;height:4px;z-index:0;pointer-events:none}
+.how-line svg{width:100%;height:12px;overflow:visible}
+.how-line path{stroke-dasharray:1000;stroke-dashoffset:1000;transition:stroke-dashoffset 2.2s var(--ease) .2s}
+.how-line.in path{stroke-dashoffset:0}
+.how .st3{position:relative;z-index:1;padding:26px 22px}
+.how .num{width:76px;height:76px;margin:-6px auto 16px;border-radius:24px;display:grid;place-items:center;font:900 30px var(--font);color:#fff;
+  background:linear-gradient(135deg,var(--or),var(--or2));box-shadow:0 18px 40px -16px var(--or-glow)}
+.how .st3:nth-child(3) .num{background:linear-gradient(135deg,var(--or2),#A78BFA)}
+.how .st3:nth-child(4) .num{background:linear-gradient(135deg,#5B7CFF,var(--cy))}
+.how h3{text-align:center}
+.how p{font-size:14px;text-align:center}
+.demo{margin-top:16px;border-radius:14px;border:1px solid var(--line);background:#050913;padding:14px;min-height:132px;font-size:12px}
+.demo .chip{display:inline-block;margin:3px;padding:5px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--tx2);font-weight:650;transition:.3s}
+.st3.in .demo .chip.pick{animation:pick 3.6s var(--ease) infinite}
+@keyframes pick{0%,25%{background:transparent;border-color:var(--line2);color:var(--tx2)}35%,85%{background:rgba(250,88,45,.2);border-color:var(--or);color:#fff;transform:scale(1.06)}100%{transform:none}}
+.demo .fld{margin-bottom:8px}
+.demo .fld span{display:block;color:var(--mut2);font-weight:700;margin-bottom:3px}
+.demo .fld div{position:relative;font:12px var(--mono);color:#E2E8F0;border:1px solid var(--line2);border-radius:7px;padding:6px 9px;overflow:hidden;white-space:nowrap}
+.demo .fld div em{font-style:normal;display:inline-block;overflow:hidden;vertical-align:bottom;width:0;border-right:2px solid var(--or2)}
+.st3.in .demo .fld div em{animation:typeW 4s steps(14) infinite}
+.st3.in .demo .fld:nth-child(2) div em{animation-delay:.8s}
+.demo .fld div::after{content:"✓";position:absolute;right:9px;top:5px;color:var(--ok);font-weight:900;opacity:0}
+.st3.in .demo .fld div::after{animation:okIn 4s infinite}
+.st3.in .demo .fld:nth-child(2) div::after{animation-delay:.8s}
+@keyframes typeW{0%{width:0}45%,90%{width:14ch}100%{width:14ch}}
+@keyframes okIn{0%,45%{opacity:0}55%,92%{opacity:1}100%{opacity:0}}
+.demo .tabs{display:flex;gap:6px;margin-bottom:10px}
+.demo .tabs b{flex:1;text-align:center;padding:5px;border-radius:7px;border:1px solid var(--line2);color:var(--mut);font-weight:750}
+.demo .tabs b.on{color:#fff;border-color:var(--or);background:rgba(250,88,45,.16)}
+.demo .term{font:11.5px/1.7 var(--mono);color:#E2E8F0;white-space:pre;overflow:hidden;min-height:76px}
+.demo .term .k{color:var(--or2)} .demo .term .c{color:#64748B} .demo .term .n{color:var(--cy)}
+.demo .cur{display:inline-block;width:7px;height:13px;background:var(--or2);vertical-align:-2px;animation:led 1s steps(1) infinite}
+
+/* ---------- chiffres clés ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:30px}
+.kpi{text-align:center;padding:26px 14px;border-radius:20px;border:1px solid var(--line);background:var(--panel);position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;left:20%;right:20%;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--sc,var(--or2)),transparent)}
+.kpi b{display:block;font:900 clamp(38px,5vw,58px)/1 var(--font);letter-spacing:-.04em;color:#fff;font-variant-numeric:tabular-nums}
+.kpi b small{font-size:.42em;color:var(--sc,var(--or2));margin-left:.25em;letter-spacing:-.01em}
+.kpi>span{display:block;margin-top:8px;font-size:13px;color:var(--mut);font-weight:650}
+
+/* ---------- téléchargement ---------- */
+.dl{display:grid;grid-template-columns:auto 1fr auto;gap:30px;align-items:center;padding:34px;border-radius:26px;border:1px solid rgba(0,184,255,.35);
+  background:linear-gradient(120deg,rgba(250,88,45,.10),rgba(0,184,255,.08));position:relative;overflow:hidden}
+.dl::before{content:"";position:absolute;inset:-1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);transform:translateX(-100%);animation:sheen 5s ease-in-out infinite;pointer-events:none}
+@keyframes sheen{60%,100%{transform:translateX(100%)}}
+.dl-ico{width:110px;height:110px}
+.dl-ico .zip-arrow{animation:dlArrow 2s var(--ease) infinite}
+@keyframes dlArrow{0%{transform:translateY(-10px);opacity:0}40%,70%{transform:none;opacity:1}100%{transform:translateY(8px);opacity:0}}
+.dl ol{list-style:none;display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;counter-reset:dl}
+.dl ol li{counter-increment:dl;font-size:14px;padding:8px 14px 8px 8px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.dl ol li::before{content:counter(dl);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:12px;background:linear-gradient(135deg,var(--or),var(--cy));color:#fff}
+.dl .dl-btns{display:flex;flex-direction:column;gap:10px}
+.dl code{font-size:12px;color:var(--cy2)}
+
+/* ---------- cartes de parcours (partagé PAN-OS / Panorama) ---------- */
+.pk-grid{margin-top:26px}
+.pk-card{display:flex!important;flex-direction:column;gap:6px}
+.pk-card .pk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pk-card .ico{margin-bottom:6px}
+.pk-card .pk-meta{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pk-card .pk-steps{list-style:none;counter-reset:pk;margin:10px 0 14px;display:grid;gap:4px;font-size:12.5px;color:var(--tx2);position:relative}
+.pk-card .pk-steps::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:linear-gradient(var(--or),transparent)}
+.pk-card .pk-steps li{counter-increment:pk;display:flex;gap:9px;align-items:center;position:relative}
+.pk-card .pk-steps li::before{content:counter(pk);flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:800 10px var(--font);background:#0B1224;border:1px solid var(--or);color:#fff}
+.pk-card .pk-go{margin-top:auto;font-weight:800;font-size:14px;color:var(--or2)}
+.pk-card:hover .pk-go{text-decoration:underline}
+
+@media (max-width:1000px){
+  .hub-hero .wrap{grid-template-columns:1fr}
+  .hub-hero{padding-top:40px}
+  .hub-scene{max-width:600px;margin-inline:auto}
+}
+@media (max-width:900px){
+  .prod-grid{grid-template-columns:1fr}
+  .how{grid-template-columns:1fr}
+  .how-line{display:none}
+  .kpis{grid-template-columns:1fr 1fr}
+  .dl{grid-template-columns:1fr;text-align:left}
+  .dl-ico{width:80px;height:80px}
+}
+@media (max-width:520px){
+  .prod{padding:22px}
+  .prod h3{font-size:22px}
+  .prod .p-art{height:120px}
+  .kpis{gap:12px}
+  .kpi{padding:20px 10px}
+  .dl{padding:24px}
+}
+@media (prefers-reduced-motion:reduce){
+  .hub-marquee .trk{animation:none;flex-wrap:wrap;width:auto;justify-content:center}
+  .hub-marquee .trk [aria-hidden]{display:none}
+  .hub-scene .draw{stroke-dashoffset:0}
+  .how-line path{stroke-dashoffset:0}
+  .demo .fld div em{width:14ch}
+  .demo .fld div::after{opacity:1}
+  .prod{transform:none!important}
+}
+.hub-hero,#produits{overflow-x:clip}
