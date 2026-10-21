@@ -61,6 +61,17 @@
       steps: ["p01-licence", "p02-deploy"],
     },
     {
+      id: "pano-ztp", icon: "📦", level: "Intermédiaire", duration: "≈ 50 min",
+      title: "Déployer des sites par ZTP",
+      desc: "Zero Touch Provisioning : plugin ZTP et certificat Panorama, enregistrement auprès du service ZTP, compte installateur, template de connectivité, template stack, ajout des pare-feux (série + claim key), envoi des logs, puis checklist de mise en service sur site.",
+      tags: ["ZTP", "zero touch", "agences", "claim key", "installateur"],
+      steps: ["p11-plugin", "p11-register", "p11-installer", "p11-template", "p03-stack", "p11-add-fw", "p05-fwd", "p11-onsite"],
+      values: { dg: "DG-ZTP", template: "TPL-ZTP", stack: "TS-ZTP-Agences" },
+      moduleValues: {
+        "p03-stack": { stackDesc: "Pare-feux des agences deployes par ZTP", extraTpl: ["TPL-Agences"], doPush: false, force: false },
+      },
+    },
+    {
       id: "pano-troubleshoot", icon: "🩺", level: "Intermédiaire", duration: "≈ 20 min",
       title: "Dépannage",
       desc: "Pare-feu déconnecté, commit/push en échec, logs absents : commandes de diagnostic Panorama et pare-feu, puis requêtes de logs ciblées.",

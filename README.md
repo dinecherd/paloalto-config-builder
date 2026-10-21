@@ -14,7 +14,7 @@ Outil web pour configurer un environnement Palo Alto Networks chez n'importe que
 |---|---|---|
 | Page | `pages/pan-os.html` | `pages/panorama.html` |
 | Configurateur | `pages/configurateur.html` | `pages/panorama-configurateur.html` |
-| Contenu | 68 modules + parcours guidés | Mise en service, ajout de pare-feux, templates & stacks, device groups, logs, admins, rapports, dépannage, HA |
+| Contenu | 68 modules + parcours guidés | Mise en service, ajout de pare-feux, templates & stacks, device groups, logs, admins, rapports, dépannage, HA, Zero Touch Provisioning (ZTP) |
 | Spécificités | Assistants NAT & Règle | Commit to Panorama, Push to Devices, CLI côté pare-feu |
 
 ### PAN-OS — modules

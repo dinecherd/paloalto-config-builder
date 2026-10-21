@@ -176,6 +176,7 @@
 <script src="../assets/js/panorama/p01-p03.js"></script>
 <script src="../assets/js/panorama/p04-p06.js"></script>
 <script src="../assets/js/panorama/p07-p10.js"></script>
+<script src="../assets/js/panorama/p11-ztp.js"></script>
 <script src="../assets/js/panorama/scenarios.js"></script>
 <script>
 (function () {
@@ -432,7 +433,7 @@
   draw();
 
   /* ================= grille des modules ================= */
-  const FALLBACK = { P01: "Mise en service Panorama", P02: "Ajout de pare-feux", P03: "Templates", P04: "Device groups", P05: "Collecte & transfert de logs", P06: "Utilisation des logs", P07: "Comptes administrateurs", P08: "Rapports", P09: "Dépannage", P10: "Avancé" };
+  const FALLBACK = { P01: "Mise en service Panorama", P02: "Ajout de pare-feux", P03: "Templates", P04: "Device groups", P05: "Collecte & transfert de logs", P06: "Utilisation des logs", P07: "Comptes administrateurs", P08: "Rapports", P09: "Dépannage", P10: "Avancé", P11: "Zero Touch Provisioning (ZTP)" };
   const name = m => (C.MODNAMES && C.MODNAMES[m]) || FALLBACK[m] || m;
   const mods = (C.list || []).filter(d => /^P\d/.test(d.module || "") || /^p\d/.test(d.id || ""));
   const groups = {};
